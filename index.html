@@ -539,13 +539,67 @@ body{
 .issue-badge.serious{background:#FFF0F0;color:var(--primary)}
 .issue-badge.minor{background:#FFF9F0;color:var(--accent)}
 .issue-badge.ok{background:#F0FFF4;color:var(--accent3)}
+
+/* 添加到桌面引导 */
+.add-to-home-banner{
+  position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+  background: var(--primary); color: #fff; padding: 10px 16px;
+  border-radius: 24px; font-size: 13px; font-weight: 600;
+  z-index: 200; cursor: pointer; box-shadow: 0 4px 20px rgba(255,107,107,0.4);
+  white-space: nowrap; animation: bannerPulse 2s infinite;
+}
+.banner-close{color: rgba(255,255,255,0.7); margin-left: 10px; font-size: 14px;}
+@keyframes bannerPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
+.guide-overlay{
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5); z-index: 999;
+  justify-content: center; align-items: center;
+}
+.guide-overlay.show{display:flex}
+.guide-card{
+  background: #fff; border-radius: 16px; padding: 24px;
+  margin: 20px; max-width: 340px; text-align: center;
+}
+.guide-title{font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--text)}
+.guide-step{font-size: 14px; color: var(--text-secondary); text-align: left; margin-bottom: 12px; line-height: 1.6}
+.guide-close-btn{
+  margin-top: 16px; background: var(--primary); color: #fff; border: none;
+  padding: 10px 40px; border-radius: 24px; font-size: 15px; cursor: pointer;
+}
 </style>
 <script src="https://web.sdk.qcloud.com/tcb/3.11.0/tcb.js"></script>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="幼儿园工作台">
+  <meta name="mobile-web-app-capable" content="yes">
+  <script>
+  (function(){
+    var manifest={name:"幼儿园教学管理工作台",short_name:"幼儿园工作台",start_url:".",display:"standalone",background_color:"#F8F9FA",theme_color:"#FF6B6B",icons:[{src:"data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" rx="32" fill="#FF6B6B"/><text x="96" y="110" font-size="80" text-anchor="middle" fill="white">🏫</text></svg>'),sizes:"192x192",type:"image/svg+xml"}]};
+    var blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
+    var link=document.createElement("link");
+    link.rel="manifest";link.href=URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  })();
+  </script>
 </head>
 <body>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- 添加到桌面引导 -->
+<div class="add-to-home-banner" id="addHomeBanner" onclick="showAddHomeGuide()">
+  📌 点击这里添加到手机桌面
+  <span class="banner-close" onclick="event.stopPropagation();document.getElementById('addHomeBanner').style.display='none'">✕</span>
+</div>
+<div class="guide-overlay" id="guideOverlay" onclick="this.style.display='none'">
+  <div class="guide-card" onclick="event.stopPropagation()">
+    <div class="guide-title">📱 添加到手机桌面</div>
+    <div class="guide-step"><b>OPPO / 其他安卓：</b><br>点浏览器菜单 → "添加到桌面"</div>
+    <div class="guide-step"><b>iPhone Safari：</b><br>点分享按钮 → "添加到主屏幕"</div>
+    <button class="guide-close-btn" onclick="document.getElementById('guideOverlay').style.display='none'">知道了</button>
+  </div>
+</div>
 
 <!-- Overlay -->
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
@@ -3918,6 +3972,20 @@ async function init() {
 }
 
 init();
+
+// 添加到桌面引导
+function showAddHomeGuide() {
+  document.getElementById('guideOverlay').style.display = 'flex';
+}
+(function(){
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  var isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (isMobile && !isStandalone && !localStorage.getItem('addHomeDismissed')) {
+    setTimeout(function(){
+      document.getElementById('addHomeBanner').style.display = 'block';
+    }, 3000);
+  }
+})();
 </script>
 </body>
 </html>
