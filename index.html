@@ -1,0 +1,3923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>幼儿园教学管理工作台</title>
+<style>
+:root {
+  --primary: #FF6B6B;
+  --primary-light: #FF8E8E;
+  --primary-dark: #E55A5A;
+  --accent: #FFA94D;
+  --accent2: #748FFC;
+  --accent3: #51CF66;
+  --accent4: #9775FA;
+  --bg: #F8F9FA;
+  --card: #FFFFFF;
+  --text: #2D3436;
+  --text-secondary: #636E72;
+  --text-light: #999;
+  --border: #E9ECEF;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --nav-width: 280px;
+  --topbar-h: 52px;
+  --bottombar-h: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+/* Overlay */
+.overlay{
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  background: rgba(0,0,0,0.4);
+  z-index: 90;
+  opacity: 0; visibility: hidden;
+  transition: all 0.3s;
+}
+.overlay.active{opacity:1;visibility:visible}
+
+/* Top Bar */
+.topbar{
+  position: sticky; top:0; z-index:50;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  height: var(--topbar-h);
+  display: flex; align-items: center;
+  padding: 0 14px;
+  box-shadow: 0 2px 8px rgba(255,107,107,0.25);
+}
+.topbar .menu-btn{
+  width:36px; height:36px; border:none; background:rgba(255,255,255,0.2);
+  border-radius:8px; color:#fff; font-size:20px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; flex-shrink:0;
+}
+.topbar .title{
+  flex:1; text-align:center; font-size:16px; font-weight:600;
+  letter-spacing:0.5px;
+}
+.topbar .icon-btn{
+  width:36px; height:36px; border:none; background:rgba(255,255,255,0.2);
+  border-radius:8px; color:#fff; font-size:18px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; flex-shrink:0;
+}
+.sync-dot{
+  display:inline-block; width:8px; height:8px; border-radius:50%;
+  margin-right:4px; vertical-align:middle;
+}
+.sync-dot.online{ background:#51CF66; box-shadow:0 0 6px #51CF66; }
+.sync-dot.offline{ background:#FF6B6B; }
+.sync-dot.connecting{ background:#FFA94D; animation:pulse 1s infinite; }
+@keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:0.3} }
+.sync-msg{ font-size:11px; color:#FF6B6B; padding:4px 12px; background:#FFF5F5; border-radius:4px; margin:8px 0; }
+.topbar .kinder-switcher{
+  display:flex; align-items:center; gap:3px;
+  background:rgba(255,255,255,0.25);
+  padding:5px 10px; border-radius:8px;
+  font-size:13px; font-weight:600;
+  cursor:pointer; margin-right:8px;
+  white-space:nowrap; user-select:none;
+}
+.kinder-menu{
+  position:fixed; top:52px; right:8px; z-index:200;
+  background:#fff; border-radius:12px;
+  box-shadow:var(--shadow-lg);
+  overflow:hidden; min-width:200px;
+  animation:fadeIn 0.15s ease;
+}
+.kinder-menu-item{
+  padding:12px 16px; font-size:14px; cursor:pointer;
+  border-bottom:1px solid var(--border);
+  line-height:1.5; transition:background 0.1s;
+}
+.kinder-menu-item:last-child{border-bottom:none}
+.kinder-menu-item:hover,.kinder-menu-item.active{background:#FFF5F5;color:var(--primary)}
+.kinder-menu-item small{color:var(--text-light);font-size:11px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Side Drawer */
+.sidebar{
+  position:fixed; top:0; left:0; bottom:0; width:var(--nav-width);
+  background: #fff; z-index:100;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: var(--shadow-lg);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+  padding-bottom: var(--safe-bottom);
+}
+.sidebar.active{transform:translateX(0)}
+.sidebar-header{
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color:#fff; padding: 20px 16px;
+  display:flex; align-items:center; gap:12px;
+}
+.sidebar-header .avatar{
+  width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.25);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px;
+}
+.sidebar-header .info{font-size:12px;opacity:0.9}
+.sidebar-header .info .name{font-size:16px;font-weight:600;opacity:1}
+.sidebar-nav{
+  flex:1; overflow-y:auto; padding:8px 0;
+  -webkit-overflow-scrolling: touch;
+}
+.nav-item{
+  display:flex; align-items:center; padding:13px 16px;
+  cursor:pointer; transition: all 0.2s;
+  border-left:3px solid transparent;
+  gap:10px; font-size:14px; color: var(--text-secondary);
+  font-weight:500; position:relative;
+}
+.nav-item:active{background:#f0f0f0}
+.nav-item.active{
+  background: linear-gradient(90deg, rgba(255,107,107,0.08), transparent);
+  border-left-color: var(--primary);
+  color: var(--primary); font-weight:600;
+}
+.nav-item .nav-icon{
+  width:32px; height:32px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+}
+.nav-item .arrow{
+  margin-left:auto; font-size:12px; color:#bbb;
+  transition: transform 0.3s;
+}
+.nav-item .arrow.open{transform:rotate(90deg)}
+
+.sub-nav{
+  background:#fafafa; overflow:hidden;
+  max-height:0; transition: max-height 0.3s ease;
+}
+.sub-nav.open{max-height:600px}
+.sub-item{
+  display:flex; align-items:center; padding:10px 16px 10px 52px;
+  cursor:pointer; font-size:13px; color: var(--text-secondary);
+  transition:all 0.15s; gap:8px;
+}
+.sub-item:active{background:#eee}
+.sub-item.active{color:var(--primary);font-weight:600;background:rgba(255,107,107,0.04)}
+.sidebar-footer{
+  display:flex; gap:8px; padding:10px 12px;
+  border-top:1px solid var(--border); background:#fafafa;
+  flex-shrink:0;
+}
+.sub-item .dot{width:5px;height:5px;border-radius:50%;background:#ddd;flex-shrink:0}
+.sub-item.active .dot{background:var(--primary)}
+
+/* Main Content */
+.main-content{
+  padding: 12px 14px;
+  padding-bottom: calc(var(--bottombar-h) + var(--safe-bottom) + 20px);
+  min-height: calc(100vh - var(--topbar-h) - var(--bottombar-h));
+}
+
+/* Bottom Bar */
+.bottombar{
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:480px;
+  background:#fff; z-index:50;
+  display:flex; border-top:1px solid var(--border);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  padding-bottom: var(--safe-bottom);
+}
+.bar-item{
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:8px 4px; cursor:pointer;
+  color: var(--text-light); font-size:10px; gap:3px;
+  transition: color 0.2s;
+}
+.bar-item .bar-icon{font-size:20px}
+.bar-item.active{color:var(--primary)}
+
+/* Card */
+.card{
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px;
+  margin-bottom: 12px;
+}
+.card-header{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom: 12px;
+}
+.card-title{font-size:15px; font-weight:600}
+.card-badge{
+  font-size:11px; padding:2px 10px; border-radius:20px;
+  font-weight:500;
+}
+.card-badge.red{background:#FFF5F5; color:var(--primary)}
+.card-badge.green{background:#F0FFF4; color:var(--accent3)}
+.card-badge.blue{background:#EDF2FF; color:var(--accent2)}
+.card-badge.purple{background:#F8F0FF; color:var(--accent4)}
+.card-badge.orange{background:#FFF9F0; color:var(--accent)}
+
+/* Stats grid */
+.stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px}
+.stat-card{
+  background:var(--card); border-radius:var(--radius-sm);
+  padding:12px; box-shadow:var(--shadow);
+  display:flex; align-items:center; gap:10px;
+}
+.stat-card .stat-icon{
+  width:40px; height:40px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; flex-shrink:0;
+}
+.stat-card .stat-num{font-size:22px;font-weight:700;line-height:1}
+.stat-card .stat-label{font-size:11px;color:var(--text-secondary);margin-top:2px}
+
+/* Button */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:8px 16px; border-radius:var(--radius-sm); border:none;
+  font-size:13px; font-weight:600; cursor:pointer; gap:6px;
+  transition: all 0.2s; white-space:nowrap;
+}
+.btn:active{transform:scale(0.96)}
+.btn-primary{
+  background:linear-gradient(135deg, var(--primary), var(--primary-light));
+  color:#fff;
+}
+.btn-outline{
+  background:#fff; color:var(--primary);
+  border:1.5px solid var(--primary);
+}
+.btn-sm{padding:5px 12px;font-size:11px;border-radius:6px}
+.btn-block{width:100%}
+
+/* List */
+.list-item{
+  display:flex; align-items:center; padding:10px 0;
+  border-bottom:1px solid var(--border); gap:10px;
+}
+.list-item:last-child{border-bottom:none}
+.list-item .li-icon{
+  width:36px; height:36px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+}
+.list-item .li-info{flex:1;min-width:0}
+.list-item .li-title{font-size:14px;font-weight:500}
+.list-item .li-sub{font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-item .li-extra{font-size:12px;color:var(--text-light);flex-shrink:0;text-align:right}
+
+/* Tags */
+.tag{
+  display:inline-block;padding:2px 8px;border-radius:4px;
+  font-size:11px;font-weight:500;
+}
+.tag.red{background:#FFF5F5;color:var(--primary)}
+.tag.green{background:#F0FFF4;color:var(--accent3)}
+.tag.blue{background:#EDF2FF;color:var(--accent2)}
+.tag.orange{background:#FFF9F0;color:var(--accent)}
+.tag.purple{background:#F8F0FF;color:var(--accent4)}
+
+/* Progress bar */
+.progress-bar{
+  height:6px; background:#eee; border-radius:3px;
+  overflow:hidden; margin-top:4px;
+}
+.progress-fill{
+  height:100%; border-radius:3px;
+  background:linear-gradient(90deg, var(--accent3), #69DB7C);
+  transition: width 0.5s;
+}
+
+/* Form */
+.form-group{margin-bottom:12px}
+.form-label{font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px}
+.form-input{
+  width:100%; padding:10px 12px; border:1.5px solid var(--border);
+  border-radius:var(--radius-sm); font-size:14px;
+  outline:none; transition:border-color 0.2s;
+  background:#fff; font-family:inherit;
+}
+.form-input:focus{border-color:var(--primary)}
+.form-textarea{
+  min-height:80px; resize:vertical;
+}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23636E72' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+
+/* Modal */
+.modal-mask{
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.45); z-index:200;
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; visibility:hidden; transition:all 0.25s;
+}
+.modal-mask.active{opacity:1;visibility:visible}
+.modal-box{
+  background:#fff; width:100%; max-width:480px;
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  max-height:85vh; overflow-y:auto;
+  padding:20px 16px;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  transform:translateY(100%);
+  transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.modal-mask.active .modal-box{transform:translateY(0)}
+.modal-title{font-size:17px;font-weight:700;text-align:center;margin-bottom:16px}
+
+/* Chip */
+.chip-group{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  padding:5px 12px; border-radius:20px; border:1.5px solid var(--border);
+  font-size:12px; cursor:pointer; transition:all 0.15s;
+  background:#fff;
+}
+.chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
+
+/* KPI Cards - horizontal scroll */
+.kpi-row{
+  display:flex; gap:10px; overflow-x:auto;
+  padding-bottom:4px; margin-bottom:12px;
+  -webkit-overflow-scrolling:touch;
+  scroll-snap-type:x mandatory;
+}
+.kpi-row::-webkit-scrollbar{display:none}
+.kpi-card{
+  min-width:130px; background:var(--card);
+  border-radius:var(--radius); padding:12px;
+  box-shadow:var(--shadow); scroll-snap-align:start;
+  flex-shrink:0;
+}
+.kpi-card .kpi-icon{font-size:24px;margin-bottom:6px}
+.kpi-card .kpi-num{font-size:24px;font-weight:700;line-height:1}
+.kpi-card .kpi-label{font-size:11px;color:var(--text-secondary);margin-top:2px}
+
+/* Empty state */
+.empty{
+  text-align:center;padding:40px 20px;color:var(--text-light);
+}
+.empty .empty-icon{font-size:48px;margin-bottom:12px}
+.empty .empty-text{font-size:14px}
+
+/* Section Header */
+.section-header{
+  font-size:15px; font-weight:700; margin:16px 0 10px;
+  display:flex; align-items:center; gap:8px;
+}
+.section-header::before{
+  content:''; width:4px; height:16px; border-radius:2px;
+  background:var(--primary); display:block;
+}
+
+/* Timeline */
+.timeline-item{
+  display:flex; gap:10px; padding:8px 0;
+  position:relative;
+}
+.timeline-item::before{
+  content:''; width:8px; height:8px; border-radius:50%;
+  background:var(--primary); margin-top:5px; flex-shrink:0;
+}
+.timeline-item .tm-content{flex:1;font-size:13px}
+.timeline-item .tm-time{font-size:11px;color:var(--text-light)}
+
+/* Search bar */
+.search-bar{
+  display:flex; gap:8px; margin-bottom:12px;
+}
+.search-bar input{
+  flex:1; padding:9px 12px; border:1.5px solid var(--border);
+  border-radius:var(--radius-sm); font-size:13px; outline:none;
+  background:#fff;
+}
+.search-bar input:focus{border-color:var(--primary)}
+
+/* Page/Module container */
+.module-page{display:none}
+.module-page.active{display:block}
+.sub-page{display:none}
+.sub-page.active{display:block}
+
+/* Toast */
+.toast{
+  position:fixed; top:60px; left:50%; transform:translateX(-50%);
+  background:#2D3436; color:#fff; padding:10px 24px;
+  border-radius:20px; font-size:13px; z-index:300;
+  opacity:0; transition:opacity 0.3s; pointer-events:none;
+  white-space:nowrap;
+}
+.toast.show{opacity:1}
+
+/* Rich card for content creation */
+.rich-card{
+  background:var(--card); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:14px; margin-bottom:10px;
+}
+.rich-card .rc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.rich-card .rc-body{font-size:13px;line-height:1.6;color:var(--text-secondary)}
+.rich-card .rc-actions{display:flex;gap:6px;margin-top:8px}
+
+/* Checkbox list */
+.check-list-item{
+  display:flex;align-items:center;padding:8px 0;
+  gap:10px;border-bottom:1px solid var(--border);
+  font-size:14px;
+}
+.check-list-item:last-child{border-bottom:none}
+.checkbox{
+  width:20px;height:20px;border:2px solid #ccc;
+  border-radius:4px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;cursor:pointer;
+  font-size:12px;color:transparent;
+}
+.checkbox.checked{
+  background:var(--primary);border-color:var(--primary);
+  color:#fff;
+}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab-item{
+  padding:8px 14px;font-size:13px;cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-2px;
+  white-space:nowrap;color:var(--text-secondary);
+  transition:all 0.2s;flex-shrink:0;
+}
+.tab-item.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+
+/* Quick action rows */
+.quick-actions{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  margin-bottom:12px;
+}
+.quick-action{
+  background:var(--card); border-radius:var(--radius-sm);
+  padding:12px; box-shadow:var(--shadow); cursor:pointer;
+  display:flex; align-items:center; gap:8px; font-size:13px;
+  font-weight:500; transition:all 0.15s;
+}
+.quick-action:active{background:#f5f5f5;transform:scale(0.97)}
+.quick-action .qa-icon{
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+
+/* Copy btn */
+.copy-btn{
+  background:none; border:1px solid var(--border); border-radius:4px;
+  padding:2px 8px; font-size:10px; cursor:pointer; color:var(--text-light);
+}
+
+/* Calendar */
+.calendar{margin-bottom:12px}
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:8px 4px}
+.cal-title{font-size:16px;font-weight:700}
+.cal-nav{width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;
+  background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)}
+.cal-nav:active{background:#f0f0f0}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;
+  font-size:11px;color:var(--text-light);padding:6px 0;font-weight:600}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-day{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;
+  align-items:center;justify-content:flex-start;padding:3px 2px;
+  font-size:13px;cursor:pointer;position:relative;min-height:40px;
+  border:1.5px solid transparent;transition:all 0.15s}
+.cal-day:hover{background:#F0F4FF;border-color:var(--accent2)}
+.cal-day.other-month{color:var(--text-light);opacity:0.45}
+.cal-day.today{border-color:var(--primary);background:#FFF5F5;font-weight:700}
+.cal-day.selected{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+.cal-day.selected.today{border-color:var(--primary)}
+.cal-dots{display:flex;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:center}
+.cal-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.cal-dot.urgent{background:var(--primary)}
+.cal-dot.normal{background:var(--accent2)}
+.cal-dot.overdue{background:var(--accent)}
+.cal-day.selected .cal-dot.urgent{background:#fff}
+.cal-day.selected .cal-dot.normal{background:#fff}
+.cal-day.selected .cal-dot.overdue{background:#fff}
+.cal-todo-list{margin-top:10px}
+.cal-todo-date{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)}
+
+/* Patrol Records */
+.patrol-item{display:flex;gap:10px;padding:10px;border-radius:10px;margin-bottom:8px;
+  background:#fff;border:1px solid var(--border);align-items:flex-start}
+.patrol-item .patrol-type{width:36px;height:36px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.patrol-item .patrol-type.text{background:#F0F4FF;color:var(--accent2)}
+.patrol-item .patrol-type.photo{background:#FFF0F6;color:var(--accent4)}
+.patrol-item .patrol-type.video{background:#FFF9F0;color:var(--accent)}
+.patrol-info{flex:1;min-width:0}
+.patrol-info .patrol-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.patrol-info .patrol-meta{font-size:11px;color:var(--text-light)}
+.patrol-info .patrol-note{font-size:12px;color:var(--text-secondary);margin-top:4px;
+  background:#f8f9fa;padding:6px 8px;border-radius:6px}
+.patrol-thumb{width:48px;height:48px;border-radius:8px;object-fit:cover;
+  flex-shrink:0;border:1px solid var(--border);cursor:pointer}
+.patrol-media-preview{max-width:100%;max-height:200px;border-radius:8px;margin-top:6px;cursor:pointer}
+.week-report-card{border:2px solid var(--accent2);border-radius:12px;padding:14px;
+  background:linear-gradient(135deg,#F0F4FF 0%,#fff 100%);margin-bottom:12px}
+.week-report-card .wr-title{font-size:15px;font-weight:700;color:var(--accent2);margin-bottom:6px}
+.week-report-card .wr-summary{font-size:12px;color:var(--text-secondary);line-height:1.6}
+.issue-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin:2px}
+.issue-badge.serious{background:#FFF0F0;color:var(--primary)}
+.issue-badge.minor{background:#FFF9F0;color:var(--accent)}
+.issue-badge.ok{background:#F0FFF4;color:var(--accent3)}
+</style>
+<script src="https://web.sdk.qcloud.com/tcb/3.11.0/tcb.js"></script>
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="avatar">🏫</div>
+    <div class="info">
+      <div class="name">蒋丽 · 教学园长</div>
+      <div id="sidebarKinder">光丽幼儿园</div>
+    </div>
+  </div>
+  <div class="sidebar-nav" id="sidebarNav"></div>
+  <div class="sidebar-footer">
+    <button class="btn btn-sm" style="flex:1;background:#f0f0f0;font-size:12px" onclick="exportData()">📥 导出数据</button>
+    <button class="btn btn-sm" style="flex:1;background:#f0f0f0;font-size:12px" onclick="importData()">📤 导入数据</button>
+  </div>
+</nav>
+
+<!-- Hidden file input for import -->
+<input type="file" id="importFileInput" accept=".json" style="display:none" onchange="handleImportFile(event)">
+
+<!-- Top Bar -->
+<div class="topbar">
+  <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+  <div class="title" id="pageTitle">工作台</div>
+  <span id="syncStatus" style="font-size:10px;white-space:nowrap;margin-right:4px" onclick="showSyncInfo()"><span class="sync-dot connecting"></span></span>
+  <div class="kinder-switcher" onclick="toggleKinderMenu()">
+    <span id="kinderName">光丽</span> <span style="font-size:10px">▼</span>
+  </div>
+  <button class="icon-btn" onclick="showSearch()">🔍</button>
+</div>
+<div class="kinder-menu" id="kinderMenu" style="display:none">
+  <div class="kinder-menu-item active" id="kmi-gl" onclick="switchKinder('gl');toggleKinderMenu()">🏫 光丽幼儿园<br><small>大四-大六 | 中四-中六 | 小五-小七 | 小小班</small></div>
+  <div class="kinder-menu-item" id="kmi-glyb" onclick="switchKinder('glyb');toggleKinderMenu()">🏫 光丽英博幼儿园<br><small>大一-大三 | 中一-中二 | 小一-小二 | 小小班</small></div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content" id="mainContent"></div>
+
+<!-- Bottom Bar -->
+<div class="bottombar" id="bottomBar"></div>
+
+<!-- Modal -->
+<div class="modal-mask" id="modalMask" onclick="this.classList.remove('active')">
+  <div class="modal-box" id="modalBox" onclick="event.stopPropagation()"></div>
+</div>
+
+<script>
+// ==================== 幼儿园配置 ====================
+const kindergartens = {
+  'gl': {
+    id: 'gl', name: '光丽幼儿园', shortName: '光丽',
+    groups: {
+      '大班级组': ['大四','大五','大六'],
+      '中班级组': ['中四','中五','中六'],
+      '小班级组': ['小五','小六','小七'],
+      '小小班级组': ['小小班']
+    },
+    allClasses: ['大四','大五','大六','中四','中五','中六','小五','小六','小七','小小班']
+  },
+  'glyb': {
+    id: 'glyb', name: '光丽英博幼儿园', shortName: '英博',
+    groups: {
+      '大班级组': ['大一','大二','大三'],
+      '中班级组': ['中一','中二'],
+      '小班级组': ['小一','小二'],
+      '小小班级组': ['小小班']
+    },
+    allClasses: ['大一','大二','大三','中一','中二','小一','小二','小小班']
+  }
+};
+let currentKinder = 'gl';
+const GLS_CLASSES = { gl: kindergartens.gl.allClasses, glyb: kindergartens.glyb.allClasses };
+
+// Calendar state
+let calendarYear, calendarMonth;
+let calSelectedDate = '';
+
+function getKinder() { return kindergartens[currentKinder]; }
+function getKinderClasses() { return getKinder().allClasses; }
+function getKinderGroups() { return getKinder().groups; }
+// 过滤当前园所数据；无kindergarten字段的（qualityData等全局数据）保留
+function kf(arr) { return (arr && arr.filter) ? arr.filter(item => !item.kindergarten || item.kindergarten === currentKinder) : (arr || []); }
+
+// ===== 数据导出/导入 =====
+function exportData() {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    kinder: currentKinder,
+    data: store,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '幼儿园工作台-' + new Date().toISOString().split('T')[0] + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  closeSidebar();
+  toast('✅ 数据已导出，文件名为 ' + a.download);
+}
+
+function importData() {
+  document.getElementById('importFileInput').click();
+}
+
+function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.data) { toast('❌ 文件格式不正确'); return; }
+      showImportConfirm(imported);
+    } catch(err) {
+      toast('❌ 文件解析失败，请确认是有效的JSON文件');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function showImportConfirm(imported) {
+  const stats = [];
+  for (const key of Object.keys(imported.data)) {
+    if (Array.isArray(imported.data[key])) {
+      stats.push(key + '：' + imported.data[key].length + '条');
+    }
+  }
+  document.getElementById('modalBox').innerHTML =
+    '<div class="modal-title">📤 导入数据确认</div>' +
+    '<div class="rich-card" style="font-size:13px;line-height:1.8">' +
+    '<b>导出时间：</b>' + (imported.exportedAt || '未知') + '<br>' +
+    '<b>数据内容：</b><br>' + stats.join('<br>') +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--text-secondary);margin:8px 0;padding:8px;background:#FFF9F0;border-radius:8px">' +
+    '⚠️ 导入将<u>覆盖</u>当前所有数据。建议先导出当前数据做备份。</div>' +
+    '<div style="display:flex;gap:8px;margin-top:8px">' +
+    '<button class="btn btn-primary btn-block" onclick="confirmImport()">确认导入</button>' +
+    '<button class="btn btn-outline btn-block" onclick="closeModal()">取消</button>' +
+    '</div>';
+  document.getElementById('modalMask').classList.add('active');
+  window._pendingImport = imported;
+}
+
+function confirmImport() {
+  if (!window._pendingImport) return;
+  const imported = window._pendingImport;
+  store = JSON.parse(JSON.stringify(imported.data));
+  if (imported.kinder) currentKinder = imported.kinder;
+  saveStore();
+  closeModal();
+  window._pendingImport = null;
+  const k = getKinder();
+  document.getElementById('kinderName').textContent = k.shortName;
+  document.getElementById('sidebarKinder').textContent = k.name;
+  renderSidebar(); renderBottomBar(); renderContent();
+  toast('✅ 数据导入成功!');
+}
+
+function switchKinder(id) {
+  currentKinder = id;
+  saveStore();
+  const k = getKinder();
+  document.getElementById('kinderName').textContent = k.shortName;
+  document.getElementById('sidebarKinder').textContent = k.name;
+  document.getElementById('pageTitle').textContent = k.name + '工作台';
+  // Re-render current page
+  if (currentModule !== 'dashboard') renderContent();
+  else renderDashboard();
+}
+
+// ==================== DATA STORE ====================
+const STORE_KEY = 'kinder_mobile_data';
+const KINDER_KEY = 'kinder_current';
+const TCB_ENV = '100051226511';
+let cloudDb = null;
+let cloudReady = false;
+let cloudError = '';
+let cloudLastSync = '';
+
+function setSyncStatus(state) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const dot = { online: '🟢', offline: '🔴', connecting: '🟠' };
+  el.innerHTML = '<span class="sync-dot ' + state + '"></span>';
+  el.title = state === 'online' ? '云端已连接' + (cloudLastSync ? '，最后同步：' + cloudLastSync : '') : state === 'connecting' ? '正在连接云端...' : '云端未连接' + (cloudError ? '：' + cloudError : '');
+}
+
+function showSyncInfo() {
+  let msg = cloudReady ? '✅ 云端已连接' : (cloudError ? '❌ 连接失败：' + cloudError : '⏳ 正在连接...');
+  if (cloudLastSync) msg += '\n📅 最后同步：' + cloudLastSync;
+  msg += '\n\n💡 如果多设备不同步，请检查：\n1. CloudBase 控制台 → 数据库 → work_data → 权限 → 所有用户可读写\n2. 匿名登录是否已开启';
+  alert(msg);
+}
+
+// ===== CloudBase 初始化 =====
+function initCloudBase() {
+  setSyncStatus('connecting');
+  return new Promise((resolve) => {
+    if (typeof tcb === 'undefined') {
+      cloudError = 'SDK未加载';
+      setSyncStatus('offline');
+      resolve(false);
+      return;
+    }
+    try {
+      const app = tcb.init({ env: TCB_ENV });
+      const auth = app.auth({ persistence: 'local' });
+      auth.anonymousAuthProvider().signIn().then(() => {
+        cloudDb = app.database();
+        cloudReady = true;
+        cloudError = '';
+        setSyncStatus('online');
+        resolve(true);
+      }).catch(err => {
+        cloudError = '登录失败：' + (err.message || '未知错误');
+        setSyncStatus('offline');
+        resolve(false);
+      });
+    } catch(e) {
+      cloudError = '初始化失败：' + (e.message || '未知');
+      setSyncStatus('offline');
+      resolve(false);
+    }
+  });
+}
+
+// ===== 数据加载（云端优先 + localStorage 降级）=====
+async function loadStore() {
+  currentKinder = localStorage.getItem(KINDER_KEY) || 'gl';
+
+  // 优先从 CloudBase 读取
+  if (cloudReady && cloudDb) {
+    try {
+      const res = await cloudDb.collection('work_data').doc('main').get();
+      if (res.data && res.data.length > 0) {
+        const saved = res.data[0];
+        delete saved._id;
+        delete saved._openid;
+        const defaults = getDefaultData();
+        for (const key of Object.keys(defaults)) {
+          if (!(key in saved)) saved[key] = defaults[key];
+        }
+        localStorage.setItem(STORE_KEY, JSON.stringify(saved));
+        return saved;
+      }
+    } catch(e) {
+      console.warn('CloudBase read failed, trying local:', e.message);
+    }
+  }
+
+  // 降级：从 localStorage 读取
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (!saved) return getDefaultData();
+    const defaults = getDefaultData();
+    for (const key of Object.keys(defaults)) {
+      if (!(key in saved)) saved[key] = defaults[key];
+    }
+    return saved;
+  } catch(e) { return getDefaultData(); }
+}
+
+// ===== 数据保存（localStorage 即时 + CloudBase 异步）=====
+function saveStore() {
+  // 即时写入 localStorage
+  localStorage.setItem(STORE_KEY, JSON.stringify(store));
+  localStorage.setItem(KINDER_KEY, currentKinder);
+
+  // 异步写入 CloudBase（去抖 500ms）
+  if (cloudReady && cloudDb) {
+    clearTimeout(window._saveTimer);
+    window._saveTimer = setTimeout(() => {
+      const doc = cloudDb.collection('work_data').doc('main');
+      doc.set(store).then(() => {
+        const now = new Date();
+        cloudLastSync = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
+        setSyncStatus('online');
+      }).catch(err => {
+        cloudError = '写入失败：' + (err.message || '请检查数据库权限');
+        setSyncStatus('offline');
+      });
+    }, 500);
+  }
+}
+
+function getDefaultData() {
+  return {
+    // ===== 教学与课程管理 =====
+    teachingPlans: [
+      // == 光丽幼儿园 ==
+      { id:1, kindergarten:'gl', group:'大班级组', planType:'学期计划', semester:'2026秋季', theme:'我要上小学了', subjects:'健康,语言,社会,科学,艺术', progress:35, status:'进行中', createdAt:'2026-07-01', weeks:18, finished:6.3, classes:['大四','大五','大六'] },
+      { id:2, kindergarten:'gl', group:'大班级组', planType:'语言计划', semester:'2026秋季', theme:'阅读与表达', subjects:'语言', progress:40, status:'进行中', createdAt:'2026-07-01', weeks:18, finished:7.2, classes:['大四','大五','大六'] },
+      { id:3, kindergarten:'gl', group:'大班级组', planType:'识字计划', semester:'2026秋季', theme:'幼小衔接识字', subjects:'语言', progress:30, status:'进行中', createdAt:'2026-07-01', weeks:18, finished:5.4, classes:['大四','大五','大六'] },
+      { id:4, kindergarten:'gl', group:'大班级组', planType:'拼音计划', semester:'2026秋季', theme:'拼音启蒙', subjects:'语言', progress:20, status:'进行中', createdAt:'2026-08-01', weeks:16, finished:3.2, classes:['大四','大五','大六'] },
+      { id:5, kindergarten:'gl', group:'大班级组', planType:'书写计划', semester:'2026秋季', theme:'规范书写训练', subjects:'语言', progress:25, status:'进行中', createdAt:'2026-08-01', weeks:16, finished:4, classes:['大四','大五','大六'] },
+      { id:6, kindergarten:'gl', group:'大班级组', planType:'美术本绘画计划', semester:'2026秋季', theme:'创意美术', subjects:'艺术', progress:15, status:'进行中', createdAt:'2026-08-15', weeks:14, finished:2.1, classes:['大四','大五','大六'] },
+      { id:7, kindergarten:'gl', group:'中班级组', planType:'学期计划', semester:'2026秋季', theme:'我爱我家', subjects:'社会,语言,健康', progress:40, status:'进行中', createdAt:'2026-07-01', weeks:16, finished:6.4, classes:['中四','中五','中六'] },
+      { id:8, kindergarten:'gl', group:'中班级组', planType:'语言计划', semester:'2026秋季', theme:'快乐表达', subjects:'语言', progress:35, status:'进行中', createdAt:'2026-07-01', weeks:16, finished:5.6, classes:['中四','中五','中六'] },
+      { id:9, kindergarten:'gl', group:'中班级组', planType:'美术本绘画计划', semester:'2026秋季', theme:'色彩世界', subjects:'艺术', progress:20, status:'进行中', createdAt:'2026-08-01', weeks:14, finished:2.8, classes:['中四','中五','中六'] },
+      { id:10, kindergarten:'gl', group:'小班级组', planType:'学期计划', semester:'2026秋季', theme:'快乐的幼儿园', subjects:'健康,社会,语言', progress:45, status:'进行中', createdAt:'2026-07-01', weeks:14, finished:6.3, classes:['小五','小六','小七'] },
+      { id:11, kindergarten:'gl', group:'小班级组', planType:'美术本绘画计划', semester:'2026秋季', theme:'涂涂画画', subjects:'艺术', progress:25, status:'进行中', createdAt:'2026-08-01', weeks:12, finished:3, classes:['小五','小六','小七'] },
+      // == 光丽英博幼儿园 ==
+      { id:12, kindergarten:'glyb', group:'大班级组', planType:'学期计划', semester:'2026秋季', theme:'奇妙的自然', subjects:'科学,艺术,社会', progress:38, status:'进行中', createdAt:'2026-07-01', weeks:18, finished:6.8, classes:['大一','大二','大三'] },
+      { id:13, kindergarten:'glyb', group:'大班级组', planType:'语言计划', semester:'2026秋季', theme:'故事大王', subjects:'语言', progress:35, status:'进行中', createdAt:'2026-07-01', weeks:18, finished:6.3, classes:['大一','大二','大三'] },
+      { id:14, kindergarten:'glyb', group:'大班级组', planType:'识字计划', semester:'2026秋季', theme:'汉字乐园', subjects:'语言', progress:28, status:'进行中', createdAt:'2026-07-15', weeks:16, finished:4.5, classes:['大一','大二','大三'] },
+      { id:15, kindergarten:'glyb', group:'大班级组', planType:'拼音计划', semester:'2026秋季', theme:'拼音王国', subjects:'语言', progress:22, status:'进行中', createdAt:'2026-08-01', weeks:16, finished:3.5, classes:['大一','大二','大三'] },
+      { id:16, kindergarten:'glyb', group:'中班级组', planType:'学期计划', semester:'2026秋季', theme:'动物朋友', subjects:'科学,语言,艺术', progress:42, status:'进行中', createdAt:'2026-07-01', weeks:16, finished:6.7, classes:['中一','中二'] },
+      { id:17, kindergarten:'glyb', group:'中班级组', planType:'语言计划', semester:'2026秋季', theme:'绘本阅读', subjects:'语言', progress:32, status:'进行中', createdAt:'2026-07-15', weeks:14, finished:4.5, classes:['中一','中二'] },
+      { id:18, kindergarten:'glyb', group:'小班级组', planType:'学期计划', semester:'2026秋季', theme:'好玩的颜色', subjects:'艺术,科学,健康', progress:48, status:'进行中', createdAt:'2026-07-01', weeks:14, finished:6.7, classes:['小一','小二'] },
+      { id:19, kindergarten:'glyb', group:'小班级组', planType:'语言计划', semester:'2026秋季', theme:'我会说话', subjects:'语言', progress:30, status:'进行中', createdAt:'2026-07-15', weeks:12, finished:3.6, classes:['小一','小二'] },
+    ],
+    courseResources: [
+      { id:1, kindergarten:'gl', title:'春天的秘密-语言活动教案', category:'教案', isQuality:true, qualityLevel:'省级', author:'王老师', class:'大四', downloads:23, date:'2026-03-10', tags:['语言','春天'] },
+      { id:2, kindergarten:'gl', title:'数字王国-数学游戏课件', category:'课件', isQuality:false, qualityLevel:'', author:'李老师', class:'大五', downloads:18, date:'2026-03-15', tags:['数学','游戏'] },
+      { id:3, kindergarten:'gl', title:'彩虹实验-科学探究教案', category:'教案', isQuality:true, qualityLevel:'市级', author:'张老师', class:'中四', downloads:15, date:'2026-04-02', tags:['科学','实验'] },
+      { id:4, kindergarten:'gl', title:'动物模仿操-运动素材', category:'素材', isQuality:false, qualityLevel:'', author:'刘老师', class:'小五', downloads:30, date:'2026-02-20', tags:['运动','音乐'] },
+      { id:5, kindergarten:'glyb', title:'我爱我家-社会领域课件', category:'课件', isQuality:true, qualityLevel:'区级', author:'陈老师', class:'大一', downloads:12, date:'2026-04-10', tags:['社会','家庭'] },
+      { id:6, kindergarten:'glyb', title:'手指画-艺术活动教案', category:'教案', isQuality:false, qualityLevel:'', author:'赵老师', class:'小二', downloads:20, date:'2026-03-25', tags:['艺术','绘画'] },
+      { id:7, kindergarten:'gl', title:'大班语言-优质课《小蝌蚪找妈妈》', category:'教案', isQuality:true, qualityLevel:'省级', author:'王老师', class:'大四', downloads:31, date:'2026-06-18', tags:['语言','优质课'] },
+      { id:8, kindergarten:'glyb', title:'中班科学-优质课《神奇的水》课件', category:'课件', isQuality:true, qualityLevel:'市级', author:'陈老师', class:'中一', downloads:25, date:'2026-05-22', tags:['科学','优质课'] },
+    ],
+    activities: [
+      { id:1, kindergarten:'gl', class:'大四', week:'第15周', activity:'春游实践活动', date:'2026-07-28', status:'已完成', domain:'社会实践' },
+      { id:2, kindergarten:'gl', class:'大五', week:'第15周', activity:'科学小实验展示', date:'2026-07-29', status:'已完成', domain:'科学' },
+      { id:3, kindergarten:'glyb', class:'大一', week:'第15周', activity:'绘本剧表演', date:'2026-07-30', status:'进行中', domain:'语言' },
+      { id:4, kindergarten:'glyb', class:'中一', week:'第16周', activity:'亲子运动会彩排', date:'2026-08-03', status:'未开始', domain:'健康' },
+      { id:5, kindergarten:'gl', class:'小五', week:'第16周', activity:'艺术节作品展', date:'2026-08-05', status:'未开始', domain:'艺术' },
+    ],
+    qualityData: {
+      health: { completed:18, total:22, score:85 },
+      language: { completed:20, total:24, score:88 },
+      society: { completed:16, total:20, score:82 },
+      science: { completed:14, total:20, score:78 },
+      art: { completed:17, total:22, score:84 },
+    },
+    researchRecords: [
+      { id:1, kindergarten:'gl', title:'区域活动材料投放策略研究', leader:'王老师', date:'2026-06-15', status:'进行中', participants:8 },
+      { id:2, kindergarten:'gl', title:'户外自主游戏观察与指导', leader:'张老师', date:'2026-07-01', status:'进行中', participants:7 },
+      { id:3, kindergarten:'glyb', title:'幼小衔接课程优化', leader:'陈老师', date:'2026-05-20', status:'已完成', participants:6 },
+      { id:4, kindergarten:'glyb', title:'绘本阅读教学策略研究', leader:'赵老师', date:'2026-07-10', status:'进行中', participants:5 },
+    ],
+    observationRecords: [
+      { id:1, kindergarten:'gl', teacher:'王老师', class:'大四', date:'2026-07-15', subject:'语言活动', evaluator:'蒋园长', score:92, comment:'教学目标明确，师幼互动良好' },
+      { id:2, kindergarten:'glyb', teacher:'陈老师', class:'大一', date:'2026-07-18', subject:'科学探究', evaluator:'蒋园长', score:88, comment:'材料准备充分，可增加小组合作环节' },
+    ],
+
+    // ===== 教师与园务管理 =====
+    teachers: [
+      { id:1, kindergarten:'gl', name:'王老师', class:'大四', position:'班主任', phone:'138****5678', certs:['幼师资格证','普通话二甲'], trainings:['2026省级骨干教师培训'], awards:['2025优秀教师'], joinDate:'2020-08-01' },
+      { id:2, kindergarten:'gl', name:'李老师', class:'中四', position:'班主任', phone:'139****8901', certs:['幼师资格证','英语四级'], trainings:['2026区级教研培训'], awards:['2025教学能手'], joinDate:'2021-08-01' },
+      { id:3, kindergarten:'gl', name:'张老师', class:'小五', position:'班主任', phone:'137****2345', certs:['幼师资格证','保育员证'], trainings:['2025市级培训'], awards:[], joinDate:'2019-08-01' },
+      { id:4, kindergarten:'glyb', name:'陈老师', class:'大一', position:'班主任', phone:'136****6789', certs:['幼师资格证','蒙台梭利初级'], trainings:['2026省级骨干教师培训'], awards:['2024优秀教师'], joinDate:'2018-08-01' },
+      { id:5, kindergarten:'glyb', name:'赵老师', class:'中一', position:'班主任', phone:'135****3456', certs:['幼师资格证','普通话二甲'], trainings:['2025区级教研培训'], awards:[], joinDate:'2022-08-01' },
+      { id:6, kindergarten:'glyb', name:'孙老师', class:'小一', position:'配班教师', phone:'134****7890', certs:['幼师资格证'], trainings:['2026新教师培训'], awards:[], joinDate:'2025-08-01' },
+    ],
+    meetings: [
+      { id:1, kindergarten:'gl', title:'期末工作总结会', date:'2026-07-30', time:'14:00', location:'会议室', attendees:'全体教师', status:'已完成', minutes:'各班级汇报本学期教学成果...' },
+      { id:2, kindergarten:'gl', title:'新学期教学计划研讨会', date:'2026-08-05', time:'09:00', location:'教研室', attendees:'年级组长', status:'待召开', minutes:'' },
+      { id:3, kindergarten:'glyb', title:'安全教育专题会', date:'2026-08-02', time:'16:00', location:'多功能厅', attendees:'全体教职工', status:'待召开', minutes:'' },
+    ],
+    meetingTasks: [
+      { id:1, meetingId:2, task:'完成级组新学期教学计划初稿', assignee:'王老师', deadline:'2026-08-10', status:'未完成' },
+      { id:2, meetingId:2, task:'收集各班级教材需求', assignee:'李老师', deadline:'2026-08-08', status:'未完成' },
+      { id:3, meetingId:3, task:'更新消防疏散路线图', assignee:'陈老师', deadline:'2026-08-03', status:'已完成' },
+    ],
+
+    // ===== 家园共育 =====
+    notices: [
+      { id:1, kindergarten:'gl', title:'关于暑期放假安排的通知', content:'各位家长：我园定于8月15日开始放暑假...', date:'2026-07-25', sender:'蒋园长', readCount:45, totalCount:60, type:'重要通知' },
+      { id:2, kindergarten:'gl', title:'本周食谱公示（7.28-8.1）', content:'周一：番茄鸡蛋面、清炒西兰花...', date:'2026-07-27', sender:'保健室', readCount:38, totalCount:60, type:'日常' },
+      { id:3, kindergarten:'glyb', title:'亲子运动会邀请函', content:'亲爱的家长朋友：我园将于8月10日举行...', date:'2026-07-28', sender:'蒋园长', readCount:22, totalCount:45, type:'活动' },
+    ],
+    parentMeetings: [
+      { id:1, kindergarten:'gl', title:'大班幼小衔接专题家长会', date:'2026-08-08', time:'18:30', location:'大四班教室', attendees:28, total:30, status:'筹备中', materials:['PPT','发言稿','幼儿发展报告'] },
+      { id:2, kindergarten:'glyb', title:'全园期末家长会', date:'2026-08-12', time:'18:00', location:'多功能厅', attendees:0, total:45, status:'计划中', materials:[] },
+    ],
+    events: [
+      { id:1, kindergarten:'gl', title:'亲子运动会', date:'2026-08-10', type:'亲子活动', signups:35, capacity:60, status:'报名中', description:'趣味亲子运动项目，增进亲子感情' },
+      { id:2, kindergarten:'glyb', title:'开放日-半日体验', date:'2026-08-15', type:'开放日', signups:12, capacity:30, status:'报名中', description:'邀请新生家庭体验幼儿园半日生活' },
+    ],
+    communicationRecords: [
+      { id:1, kindergarten:'gl', childName:'小明', parentName:'明爸爸', type:'约谈', date:'2026-07-20', topic:'幼小衔接准备', result:'家长配合完成', needFollowUp:false },
+      { id:2, kindergarten:'gl', childName:'小红', parentName:'红妈妈', type:'家访', date:'2026-07-15', topic:'饮食习惯调整', result:'已改善', needFollowUp:true, followNote:'两周后复查' },
+      { id:3, kindergarten:'glyb', childName:'豆豆', parentName:'豆妈妈', type:'电话沟通', date:'2026-07-22', topic:'社交能力发展', result:'建议多参加集体活动', needFollowUp:true, followNote:'关注课堂表现' },
+    ],
+    surveys: [
+      { id:1, kindergarten:'gl', title:'2026春季学期满意度调查', sentDate:'2026-07-01', responses:52, total:60, overallScore:4.5, aspects:{teaching:4.6, care:4.5, food:4.3, safety:4.7, communication:4.4} },
+    ],
+    complaints: [
+      { id:1, kindergarten:'gl', from:'某家长', date:'2026-07-18', content:'建议增加户外活动时间', status:'已回复', reply:'已调整作息安排，每天保证2小时户外活动', handler:'蒋园长' },
+    ],
+
+    // ===== 招生与品牌宣传 =====
+    enrollmentActivities: [
+      { id:1, kindergarten:'gl', title:'2026秋季招生开放日', date:'2026-08-15', status:'筹备中', leads:25, converted:0, budget:'3000元', sop:['场地布置','宣传物料','体验课','家长答疑','参观引导'] },
+      { id:2, kindergarten:'glyb', title:'社区亲子嘉年华', date:'2026-07-20', status:'已完成', leads:18, converted:5, budget:'2000元', sop:['活动策划','物料准备','现场执行','收尾总结'] },
+    ],
+    promoContents: [
+      { id:1, kindergarten:'gl', type:'公众号文章', title:'如何帮助孩子顺利度过分离焦虑期', date:'2026-07-25', channel:'微信公众号', views:328 },
+      { id:2, kindergarten:'glyb', type:'朋友圈文案', title:'幼儿园的夏天，每一刻都值得记录', date:'2026-07-26', channel:'朋友圈', views:156 },
+      { id:3, kindergarten:'glyb', type:'宣传海报', title:'2026秋季招生火热进行中', date:'2026-07-20', channel:'线下海报', views:0 },
+    ],
+    classPromotions: [
+      { id:1, kindergarten:'gl', class:'大四', week:'第15周', content:'科学小实验精彩瞬间', photos:8, posted:true, postedDate:'2026-07-28', platform:'家长群' },
+      { id:2, kindergarten:'gl', class:'大五', week:'第15周', content:'户外游戏快乐时光', photos:6, posted:true, postedDate:'2026-07-29', platform:'家长群' },
+      { id:3, kindergarten:'gl', class:'中四', week:'第15周', content:'绘本故事表演', photos:10, posted:false, postedDate:'', platform:'' },
+      { id:4, kindergarten:'glyb', class:'大一', week:'第15周', content:'手工制作作品展', photos:5, posted:false, postedDate:'', platform:'' },
+      { id:5, kindergarten:'glyb', class:'小一', week:'第15周', content:'好玩的颜色主题活动', photos:7, posted:true, postedDate:'2026-07-28', platform:'家长群' },
+      { id:6, kindergarten:'glyb', class:'小二', week:'第15周', content:'手指画创意作品', photos:4, posted:false, postedDate:'', platform:'' },
+    ],
+    enrollmentLeads: [
+      { id:1, kindergarten:'gl', childName:'待定', parentName:'张先生', phone:'138****9999', source:'社区活动', date:'2026-07-21', status:'跟进中', note:'意向强烈，已参观园区' },
+      { id:2, kindergarten:'glyb', childName:'待定', parentName:'李女士', phone:'139****8888', source:'朋友推荐', date:'2026-07-25', status:'待联系', note:'询问托班信息' },
+    ],
+    // ===== 研学基地管理 =====
+    studyTourPlans: [
+      { id:1, kindergarten:'gl', title:'春季农耕体验研学', target:'大班级组', date:'2026-05-15', location:'阳光农场', participants:45, budget:'5000元', status:'已完成', description:'让幼儿了解农作物生长过程，体验播种与采摘的乐趣。', highlights:['认识蔬菜水果','亲手采摘草莓','观察小动物','制作植物标本'], attFileName:'', attFileData:'', attFileSize:0 },
+      { id:2, kindergarten:'gl', title:'海洋科普研学之旅', target:'中班级组', date:'2026-06-20', location:'海洋科技馆', participants:38, budget:'6000元', status:'已完成', description:'带幼儿探索海洋世界，认识海洋生物。', highlights:['海底隧道参观','触摸池体验','海豚表演'], attFileName:'', attFileData:'', attFileSize:0 },
+      { id:3, kindergarten:'glyb', title:'非遗文化传承研学', target:'大班级组', date:'2026-09-15', location:'非遗文化园', participants:40, budget:'5500元', status:'筹备中', description:'让幼儿近距离接触非遗文化，体验传统手工艺制作。', highlights:['剪纸体验','陶艺制作','皮影戏观赏'], attFileName:'', attFileData:'', attFileSize:0 },
+    ],
+    todoItems: [],
+    patrolRecords: [],
+    weeklyReports: [],
+    studyTourMaterials: [
+      { id:1, planId:1, type:'活动方案', title:'农耕体验研学活动方案', date:'2026-05-01', status:'已上报', department:'区教育局', fileNo:'YX-2026-001', content:'一、活动背景...\n二、活动目标...\n三、活动安排...\n四、安全预案...', attFileName:'', attFileData:'', attFileSize:0 },
+      { id:2, planId:1, type:'安全预案', title:'农耕体验安全预案', date:'2026-05-02', status:'已上报', department:'区教育局', fileNo:'YX-2026-001-AQ', content:'一、交通安全\n二、场地安全\n三、食品安全\n四、应急预案...', attFileName:'', attFileData:'', attFileSize:0 },
+      { id:3, planId:1, type:'总结报告', title:'农耕体验研学总结', date:'2026-05-20', status:'已上报', department:'区教育局', fileNo:'YX-2026-001-ZJ', content:'一、活动概况...\n二、活动成果...\n三、反思与改进...', attFileName:'', attFileData:'', attFileSize:0 },
+      { id:4, planId:2, type:'活动方案', title:'海洋科普研学活动方案', date:'2026-06-10', status:'已上报', department:'市教育局', fileNo:'YX-2026-002', content:'一、活动背景...\n二、活动目标...\n三、活动流程...', attFileName:'', attFileData:'', attFileSize:0 },
+      { id:5, planId:3, type:'活动方案', title:'非遗文化传承研学方案', date:'2026-09-01', status:'待上报', department:'区教育局', fileNo:'', content:'一、活动背景...\n二、活动目标...\n三、活动流程...', attFileName:'', attFileData:'', attFileSize:0 },
+      { id:6, planId:3, type:'经费预算', title:'非遗研学经费预算表', date:'2026-09-01', status:'待上报', department:'区教育局', fileNo:'', content:'交通费：2000元\n门票费：1500元\n材料费：1000元\n餐费：1000元\n合计：5500元', attFileName:'', attFileData:'', attFileSize:0 },
+    ],
+  };
+}
+
+let store = getDefaultData(); // 初始默认数据，CloudBase 加载后会被替换
+let currentModule = 'dashboard';
+let currentSub = '';
+let openNavItem = null;
+
+// ==================== SIDEBAR NAVIGATION ====================
+const navConfig = [
+  {
+    id: 'teaching', icon: '📚', label: '教学与课程管理中心', color: '#FF6B6B',
+    subs: [
+      { id: 'teaching-plans', label: '学期计划管理' },
+      { id: 'course-resources', label: '课程资源库' },
+      { id: 'activity-board', label: '教学活动看板' },
+      { id: 'quality-analysis', label: '教学质量分析' },
+      { id: 'research', label: '教研管理' },
+    ]
+  },
+  {
+    id: 'staff', icon: '👩‍🏫', label: '教师与园务管理中心', color: '#748FFC',
+    subs: [
+      { id: 'teacher-archive', label: '教师档案库' },
+      { id: 'meeting-mgmt', label: '会议管理' },
+    ]
+  },
+  {
+    id: 'family', icon: '👨‍👩‍👧‍👦', label: '家园共育与沟通中心', color: '#9775FA',
+    subs: [
+      { id: 'notice-mgmt', label: '通知公告管理' },
+      { id: 'parent-meeting', label: '家长会管理' },
+      { id: 'event-mgmt', label: '活动管理' },
+      { id: 'comm-records', label: '家园沟通记录' },
+      { id: 'satisfaction', label: '家长满意度' },
+    ]
+  },
+  {
+    id: 'enrollment', icon: '🚀', label: '招生与品牌宣传中心', color: '#FFA94D',
+    subs: [
+      { id: 'enrollment-activity', label: '招生活动管理' },
+      { id: 'promo-content', label: '宣传内容创作' },
+      { id: 'class-promo', label: '班级宣传' },
+    ]
+  },
+  {
+    id: 'studytour', icon: '🎒', label: '研学基地管理', color: '#20C997',
+    subs: [
+      { id: 'studytour-plans', label: '研学方案' },
+      { id: 'studytour-materials', label: '研学相关材料' },
+    ]
+  },
+];
+
+function renderSidebar() {
+  let html = '';
+  navConfig.forEach(nav => {
+    const isActive = currentModule === nav.id;
+    const isOpen = openNavItem === nav.id;
+    html += `<div class="nav-item ${isActive ? 'active' : ''}" onclick="toggleNavItem('${nav.id}')">
+      <span class="nav-icon" style="background:${nav.color}20;color:${nav.color}">${nav.icon}</span>
+      ${nav.label}
+      <span class="arrow ${isOpen ? 'open' : ''}">▶</span>
+    </div>`;
+    html += `<div class="sub-nav ${isOpen ? 'open' : ''}">`;
+    nav.subs.forEach(sub => {
+      const subActive = currentSub === sub.id;
+      html += `<div class="sub-item ${subActive ? 'active' : ''}" onclick="navigateTo('${nav.id}', '${sub.id}')">
+        <span class="dot"></span>${sub.label}
+      </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('sidebarNav').innerHTML = html;
+}
+
+function toggleNavItem(id) {
+  openNavItem = openNavItem === id ? null : id;
+  renderSidebar();
+}
+
+function navigateTo(moduleId, subId) {
+  currentModule = moduleId;
+  currentSub = subId;
+  openNavItem = moduleId;
+  renderSidebar();
+  renderBottomBar();
+  renderContent();
+  closeSidebar();
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  sidebar.classList.toggle('active');
+  overlay.classList.toggle('active');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('active');
+  document.getElementById('overlay').classList.remove('active');
+}
+
+function toggleKinderMenu() {
+  const menu = document.getElementById('kinderMenu');
+  const isOpen = menu.style.display === 'block';
+  menu.style.display = isOpen ? 'none' : 'block';
+  // Update active state
+  document.querySelectorAll('.kinder-menu-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('kmi-' + currentKinder).classList.add('active');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.kinder-switcher') && !e.target.closest('.kinder-menu')) {
+    document.getElementById('kinderMenu').style.display = 'none';
+  }
+});
+
+// ==================== BOTTOM BAR ====================
+const bottomItems = [
+  { id: 'dashboard', icon: '🏠', label: '首页' },
+  { id: 'teaching', icon: '📚', label: '教学' },
+  { id: 'staff', icon: '👩‍🏫', label: '教师' },
+  { id: 'family', icon: '💬', label: '家园' },
+  { id: 'calendar', icon: '📅', label: '日历' },
+];
+
+function renderBottomBar() {
+  let html = '';
+  bottomItems.forEach(item => {
+    const active = currentModule === item.id || (item.id === 'dashboard' && currentModule === 'dashboard');
+    html += `<div class="bar-item ${active ? 'active' : ''}" onclick="quickNav('${item.id}')">
+      <span class="bar-icon">${item.icon}</span>${item.label}
+    </div>`;
+  });
+  document.getElementById('bottomBar').innerHTML = html;
+}
+
+function quickNav(id) {
+  if (id === 'dashboard') {
+    currentModule = 'dashboard'; currentSub = ''; openNavItem = null;
+  } else if (id === 'calendar') {
+    currentModule = 'calendar'; currentSub = ''; openNavItem = null;
+  } else {
+    const nav = navConfig.find(n => n.id === id);
+    if (nav && nav.subs.length > 0) {
+      currentModule = id; currentSub = nav.subs[0].id; openNavItem = id;
+    }
+  }
+  renderSidebar();
+  renderBottomBar();
+  renderContent();
+}
+
+// ==================== RENDER CONTENT ====================
+function renderContent() {
+  if (currentModule === 'dashboard') { renderDashboard(); return; }
+  if (currentModule === 'calendar') { renderCalendar(); return; }
+  const pageTitle = navConfig.find(n => n.id === currentModule);
+  document.getElementById('pageTitle').textContent = pageTitle ? pageTitle.label : '工作台';
+
+  switch(currentSub) {
+    // 教学与课程管理
+    case 'teaching-plans': renderTeachingPlans(); break;
+    case 'course-resources': renderCourseResources(); break;
+    case 'activity-board': renderActivityBoard(); break;
+    case 'quality-analysis': renderQualityAnalysis(); break;
+    case 'research': renderResearch(); break;
+    // 教师与园务管理
+    case 'teacher-archive': renderTeacherArchive(); break;
+    case 'meeting-mgmt': renderMeetingMgmt(); break;
+    // 家园共育
+    case 'notice-mgmt': renderNoticeMgmt(); break;
+    case 'parent-meeting': renderParentMeeting(); break;
+    case 'event-mgmt': renderEventMgmt(); break;
+    case 'comm-records': renderCommRecords(); break;
+    case 'satisfaction': renderSatisfaction(); break;
+    // 招生与品牌
+    case 'enrollment-activity': renderEnrollmentActivity(); break;
+    case 'promo-content': renderPromoContent(); break;
+    case 'class-promo': renderClassPromo(); break;
+    // 研学基地管理
+    case 'studytour-plans': renderStudyTourPlans(); break;
+    case 'studytour-materials': renderStudyTourMaterials(); break;
+    default: renderDashboard();
+  }
+}
+
+// ==================== DASHBOARD ====================
+function renderDashboard() {
+  const k = getKinder();
+  document.getElementById('pageTitle').textContent = k.name + '工作台';
+  const plans = kf(store.teachingPlans);
+  const groups = [...new Set(plans.map(p => p.group))];
+
+    // 待办事项 - 用户手动管理
+  const pending = kf(store.todoItems).filter(t => t.status === '进行中');
+  // 已完成工作汇总（用户完成的待办 + 自动汇总）
+  const completed = [];
+  // 用户手动标记完成的待办
+  kf(store.todoItems).filter(t => t.status === '已完成').forEach(t => {
+    completed.push({ icon: '\n✅', title: t.title, sub: (t.deadline ? '截止：' + t.deadline : '') + (t.note ? ' · ' + t.note : ''), tag: '已完成' });
+  });
+  let html = '';
+
+    // 板块一：待办事项
+  html += '<div class="section-header">\n📋 待办事项 <button class="btn btn-primary btn-sm" style="padding:3px 10px;font-size:11px;float:right;margin-top:-2px" onclick="showAddTodoModal()">➕ 添加</button><button class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:11px;float:right;margin-top:-2px;margin-right:6px" onclick="quickNav(\'calendar\')">📅 日历</button></div><div class="card">';
+  if (pending.length) {
+    html += pending.map(p => {
+      const isUrgent = p.priority === '紧急';
+      const isOverdue = p.deadline && new Date(p.deadline) < new Date(new Date().toISOString().split('T')[0]);
+      const tagStyle = isUrgent ? 'red' : (isOverdue ? 'orange' : 'blue');
+      const tagText = isUrgent ? '紧急' : (isOverdue ? '已逾期' : '待完成');
+      return '\n      <div class="list-item" style="cursor:pointer" onclick="toggleTodo(' + p.id + ')">' +
+        '<div class="li-icon" style="background:' + (isUrgent ? '#FFF0F0' : '#F0F4FF') + ';color:' + (isUrgent ? 'var(--primary)' : 'var(--accent2)') + '">' + (p.priority === '紧急' ? '\n🔴' : '\n📌') + '</div>' +
+        '<div class="li-info" style="flex:1">' +
+          '<div class="li-title" style="' + (p.status === '已完成' ? 'text-decoration:line-through;color:var(--text-light)' : '') + '">' + p.title + '</div>' +
+          '<div class="li-sub">' + (p.deadline ? '\n📅 截止：' + p.deadline : '') + (p.note ? ' · ' + p.note : '') + '</div>' +
+        '</div>' +
+        '<span class="tag ' + tagStyle + '" style="font-size:10px">' + tagText + '</span>' +
+        '<button class="btn btn-sm" style="background:none;font-size:14px;padding:2px 6px;margin-left:4px" onclick="event.stopPropagation();deleteTodo(' + p.id + ')">\n🗑️</button>' +
+      '</div>';
+    }).join('');
+  } else {
+    html += '<div class="empty"><div class="empty-text">暂无待办事项，点击"➕ 添加"创建</div></div>';
+  }
+  html += '</div>';
+// 板块二：已完成工作
+  html += '<div class="section-header">✅ 已完成工作</div><div class="card">';
+  if (completed.length) {
+    html += completed.map(c => `
+      <div class="list-item">
+        <div class="li-icon" style="background:#F0FFF4;color:var(--accent3)">${c.icon}</div>
+        <div class="li-info">
+          <div class="li-title">${c.title}</div>
+          <div class="li-sub">${c.sub}</div>
+        </div>
+        <span class="tag green">${c.tag}</span>
+      </div>
+    `).join('');
+  } else {
+    html += '<div class="empty"><div class="empty-text">暂无已完成记录</div></div>';
+  }
+  html += '</div>';
+
+  // 板块三：每日巡班记录
+  const today = new Date().toISOString().split('T')[0];
+  const todayPatrols = kf(store.patrolRecords).filter(r => r.date === today);
+  const weekStart = getWeekStart(today);
+  const weekPatrols = kf(store.patrolRecords).filter(r => r.date >= weekStart);
+  const weekIssues = weekPatrols.filter(r => r.result !== '合格');
+  html += '<div class="section-header">\n🔍 每日巡班记录 <button class="btn btn-primary btn-sm" style="padding:3px 10px;font-size:11px;float:right;margin-top:-2px" onclick="showAddPatrolModal()">➕ 记录</button></div>';
+
+  // 周报简报卡片
+  if (weekPatrols.length > 0) {
+    html += '<div class="week-report-card" onclick="renderWeeklyReport()" style="cursor:pointer">' +
+      '<div class="wr-title">📋 本周巡班概况（' + weekStart + ' 起）</div>' +
+      '<div class="wr-summary">本周共巡查 <b>' + weekPatrols.length + '</b> 次，发现 <b style="color:var(--primary)">' + weekIssues.length + '</b> 项问题需关注。' +
+      (weekIssues.length ? ' <span class="issue-badge serious">需整改</span>' : ' <span class="issue-badge ok">全部合格</span>') +
+      '</div></div>';
+  }
+
+  // 今日巡班记录
+  html += '<div class="card">';
+  if (todayPatrols.length) {
+    todayPatrols.forEach(r => {
+      const typeClass = r.mediaType === 'photo' ? 'photo' : r.mediaType === 'video' ? 'video' : 'text';
+      const typeIcon = r.mediaType === 'photo' ? '\n📷' : r.mediaType === 'video' ? '\n🎬' : '\n📝';
+      const resultBadge = r.result === '严重问题' ? 'serious' : r.result === '需整改' ? 'minor' : 'ok';
+      html += '<div class="patrol-item">' +
+        '<div class="patrol-type ' + typeClass + '">' + typeIcon + '</div>' +
+        '<div class="patrol-info">' +
+          '<div class="patrol-title">' + (r.area || '巡班记录') + ' · <span class="issue-badge ' + resultBadge + '">' + r.result + '</span></div>' +
+          '<div class="patrol-meta">\n📅 今天 · ' + (r.time || '') + '</div>' +
+          (r.note ? '<div class="patrol-note">' + r.note + '</div>' : '') +
+          (r.mediaData ? (r.mediaType === 'photo'
+            ? '<img class="patrol-media-preview" src="' + r.mediaData + '" onclick="viewPatrolMedia(\'' + r.id + '\')">'
+            : '<div style="font-size:12px;color:var(--accent2);margin-top:4px;cursor:pointer" onclick="viewPatrolMedia(\'' + r.id + '\')">\n🎬 查看视频 (点击播放)</div>') : '') +
+        '</div>' +
+        '<button class="btn btn-sm" style="background:none;font-size:14px;padding:2px 6px" onclick="event.stopPropagation();deletePatrolRecord(' + r.id + ')">\n🗑️</button>' +
+      '</div>';
+    });
+  } else {
+    html += '<div class="empty"><div class="empty-text">今天还没有巡班记录，点击"➕ 记录"开始</div></div>';
+  }
+  html += '<div style="text-align:center;padding:8px"><button class="btn btn-outline btn-sm" onclick="renderAllPatrolRecords()">📂 查看全部巡班记录</button></div>';
+  html += '</div>';
+
+  // 板块四：级组计划查看
+  html += '<div class="section-header">📖 级组计划查看</div><div class="card">';
+  groups.forEach(g => {
+    const gpPlans = plans.filter(p => p.group === g);
+    html += `<div class="rich-card" style="margin-bottom:8px" onclick="quickNavToTeachingPlans('${g}')">
+      <div class="rc-header">
+        <b>${g}</b>
+        <span style="font-size:12px;color:var(--text-secondary)">${gpPlans.length}个计划</span>
+      </div>
+      <div class="rc-body">
+        ${gpPlans.map(p => {
+          const barColor = p.progress >= 80 ? 'var(--accent3)' : p.progress >= 50 ? 'var(--accent2)' : 'var(--primary)';
+          return `<div style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span>${p.planType} · ${p.theme}</span>
+              <span style="color:${barColor};font-weight:600">${p.progress}%</span>
+            </div>
+            <div class="progress-bar" style="height:5px;margin-top:2px"><div class="progress-fill" style="width:${p.progress}%;background:${barColor}"></div></div>
+          </div>`;
+        }).join('')}
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px">覆盖班级：${gpPlans[0]?.classes?.join('、') || '-'}</div>
+      </div>
+    </div>`;
+  });
+  // 板块五：班级计划（周计划 + 其他计划）
+  const allClasses = new Set();
+  const classWeekPlans = {};  // 周计划（来自 activities）
+  const classOtherPlans = {}; // 其他计划（来自 teachingPlans）
+  kf(store.activities).forEach(a => {
+    allClasses.add(a.class);
+    if (!classWeekPlans[a.class]) classWeekPlans[a.class] = [];
+    classWeekPlans[a.class].push(a);
+  });
+  plans.forEach(p => {
+    (p.classes || []).forEach(cls => {
+      allClasses.add(cls);
+      if (!classOtherPlans[cls]) classOtherPlans[cls] = [];
+      classOtherPlans[cls].push(p);
+    });
+  });
+  const sortedCls = [...allClasses].sort((a,b) => {
+    const order = ['大','中','小'];
+    return order.indexOf(a[0]) - order.indexOf(b[0]) || a.localeCompare(b);
+  });
+  html += '<div class="section-header">🏫 班级计划</div><div class="card">';
+  sortedCls.forEach(cls => {
+    const weekActs = classWeekPlans[cls] || [];
+    const otherPlans = classOtherPlans[cls] || [];
+    const latestWeek = weekActs[weekActs.length - 1];
+    html += `<div class="rich-card" style="margin-bottom:8px" onclick="quickNavToTeachingPlansByClass('${cls}')">
+      <div class="rc-header"><b>${cls}</b></div>
+      <div class="rc-body">
+        <div style="margin-bottom:6px">
+          <span style="font-size:11px;color:var(--text-secondary);font-weight:600">📅 周计划</span>
+          ${latestWeek ? `<div style="font-size:12px;margin-top:2px">${latestWeek.week} · ${latestWeek.activity} <span class="tag ${latestWeek.status==='已完成'?'green':latestWeek.status==='进行中'?'blue':'gray'}" style="font-size:10px">${latestWeek.status}</span></div>` : '<div style="font-size:12px;color:var(--text-secondary)">暂无</div>'}
+        </div>
+        <div>
+          <span style="font-size:11px;color:var(--text-secondary);font-weight:600">📚 其他计划</span>
+          ${otherPlans.length ? `<div style="margin-top:2px">${otherPlans.map(p => `<span class="tag" style="margin:1px;font-size:10px">${p.planType} ${p.progress}%</span>`).join('')}</div>` : '<div style="font-size:12px;color:var(--text-secondary)">暂无</div>'}
+        </div>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+// 从首页点击班级计划卡片跳转
+function quickNavToTeachingPlansByClass(cls) {
+  currentMenu = 'teaching';
+  currentSub = 'teaching-plans';
+  document.getElementById('pageTitle').textContent = '教学与课程管理';
+  currentPlanType = 'all';
+  currentPlanGroup = 'all';
+  renderTeachingPlans();
+  // 滚动到对应班级位置（稍作延迟等待渲染完成）
+  setTimeout(() => {
+    const cards = document.querySelectorAll('#planList .rich-card');
+    cards.forEach(c => { if (c.textContent.includes(cls)) c.style.boxShadow = '0 0 0 3px var(--primary)'; });
+  }, 200);
+}
+
+// 从首页点击级组计划卡片跳转到教学计划页面
+function quickNavToTeachingPlans(group) {
+  currentMenu = 'teaching';
+  currentSub = 'teaching-plans';
+  document.getElementById('pageTitle').textContent = '教学与课程管理';
+  currentPlanType = 'all';
+  currentPlanGroup = group;
+  renderTeachingPlans();
+  renderSidebar();
+  renderBottomBar();
+  updateKinderDisplay();
+}
+
+// ==================== 1. 教学与课程管理 ====================
+
+let currentPlanType = 'all';
+let currentPlanGroup = 'all';
+
+function renderTeachingPlans() {
+  currentPlanType = 'all'; currentPlanGroup = 'all';
+  const planTypes = ['all', '学期计划', '语言计划', '识字计划', '拼音计划', '书写计划', '美术本绘画计划'];
+  const groups = ['大班级组', '中班级组', '小班级组'];
+  const groupsWithPlans = groups.filter(g => store.teachingPlans.some(p => p.group === g));
+
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📋 级组计划管理</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddPlanModal()">+ 一键生成</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">按计划类型筛选</div>
+    <div class="chip-group" style="margin-bottom:8px;flex-wrap:wrap" id="planTypeChips">
+      ${planTypes.map((t,i) => `<span class="chip ${i===0?'active':''}" onclick="filterPlanByType('${t}', this)">${t==='all'?'全部':t}</span>`).join('')}
+    </div>
+    <div id="planList"></div>
+  </div>`;
+  document.getElementById('mainContent').innerHTML = html;
+  renderPlanList();
+}
+
+function filterPlanByType(type, el) {
+  currentPlanType = type;
+  document.querySelectorAll('#planTypeChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderPlanList();
+}
+
+function renderPlanList() {
+  let plans = kf(store.teachingPlans);
+  if (currentPlanType !== 'all') plans = plans.filter(p => p.planType === currentPlanType);
+  if (currentPlanGroup !== 'all') plans = plans.filter(p => p.group === currentPlanGroup);
+
+  // Group by 级组
+  const groupOrder = ['大班级组', '中班级组', '小班级组'];
+  const grouped = {};
+  groupOrder.forEach(g => {
+    const items = plans.filter(p => p.group === g);
+    if (items.length) grouped[g] = items;
+  });
+
+  const groupIcons = { '大班级组': '🎓', '中班级组': '🧒', '小班级组': '👶' };
+  const typeIcons = {
+    '学期计划': '📖', '语言计划': '💬', '识字计划': '🔤', '拼音计划': '🔡',
+    '书写计划': '✍️', '美术本绘画计划': '🎨'
+  };
+
+  let html = '';
+  Object.entries(grouped).forEach(([group, items]) => {
+    const avgProgress = Math.round(items.reduce((s,p) => s + p.progress, 0) / items.length);
+    html += `<div style="margin-bottom:12px">
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+        <span>${groupIcons[group]} ${group}</span>
+        <span style="font-size:11px;color:var(--text-secondary)">整体进度 ${avgProgress}%</span>
+      </div>`;
+
+    items.forEach(p => {
+      const statusColor = p.status === '已完成' ? 'green' : (p.status === '筹备中' ? 'orange' : 'blue');
+      const pctColor = p.progress >= 80 ? 'var(--accent3)' : (p.progress >= 40 ? 'var(--accent2)' : 'var(--accent)');
+      html += `<div class="rich-card">
+        <div class="rc-header">
+          <b>${typeIcons[p.planType] || '📋'} ${p.planType} · ${p.theme}</b>
+          <span class="tag ${statusColor}">${p.status}</span>
+        </div>
+        <div class="rc-body">
+          学期：${p.semester} | 领域：${p.subjects}<br>
+          覆盖班级：${p.classes.join('、')}<br>
+          进度：已完成 ${p.finished}/${p.weeks} 周
+          <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" style="width:${p.progress}%;background:${pctColor}"></div></div>
+        </div>
+        <div class="rc-footer" style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">覆盖班级：${p.classes?.join('、') || '-'}${p.attFileName ? ' · 📎 ' + p.attFileName : ''}</div>
+        <div class="rc-actions">
+          <button class="btn btn-outline btn-sm" onclick="viewPlanDetail(${p.id})">查看详情</button>
+          <button class="btn btn-outline btn-sm" onclick="editPlan(${p.id})" style="color:var(--accent)">✏️</button>
+          <button class="btn btn-outline btn-sm" onclick="deletePlan(${p.id})" style="color:var(--primary)">🗑️</button>
+          ${p.attFileName ? '<button class="btn btn-outline btn-sm" style="color:var(--accent2)" onclick="viewAttachedFile(\'' + p.attFileName + '\', \'' + (p.attFileData || '') + '\')">📎 查看文件</button>' : ''}
+          ${p.status !== '已完成' ? `<button class="btn btn-primary btn-sm" onclick="updatePlanProgress(${p.id})">更新进度</button>` : '<span style="font-size:12px;color:var(--accent3)">✅ 已完成</span>'}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  document.getElementById('planList').innerHTML = html || '<div class="empty"><div class="empty-text">该类型暂无计划，点击右上角一键生成</div></div>';
+}
+
+function showAddPlanModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📋 一键生成级组计划</div>
+    <div class="form-group"><label class="form-label">计划类型</label>
+      <select class="form-input form-select" id="planType">
+        <option>学期计划</option><option>语言计划</option><option>识字计划</option>
+        <option>拼音计划</option><option>书写计划</option><option>美术本绘画计划</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">级组</label>
+      <select class="form-input form-select" id="planGroup">
+        <option>大班级组</option><option>中班级组</option><option>小班级组</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">学期</label>
+      <select class="form-input form-select" id="planSemester"><option>2026秋季</option><option>2027春季</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">主题名称</label>
+      <input class="form-input" id="planTheme" placeholder="如：秋天的收获">
+    </div>
+    <div class="form-group"><label class="form-label">涉及领域</label>
+      <input class="form-input" id="planSubjects" placeholder="如：健康,语言,科学">
+    </div>
+    <div class="form-group"><label class="form-label">覆盖班级（逗号分隔）</label>
+      <input class="form-input" id="planClasses" placeholder="如：大一班,大二班">
+    </div>
+    <div class="form-group"><label class="form-label">教学周数</label>
+      <input class="form-input" id="planWeeks" type="number" value="16" min="8" max="20">
+    </div>
+    <div class="form-group"><label class="form-label">📎 上传计划文件（拍照/PDF/Word）</label><input type="file" id="planFile" accept="image/*,.pdf,.doc,.docx" style="font-size:13px;padding:4px" onchange="previewPlanFile()"></div>
+    <div id="planFilePreview" style="font-size:11px;color:var(--accent3);margin-top:4px"></div>
+    <button class="btn btn-primary btn-block" onclick="addTeachingPlan()" style="margin-top:8px">一键生成计划</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addTeachingPlan() {
+  const planType = document.getElementById('planType').value;
+  const defaultThemes = {
+    '学期计划': '新学期主题', '语言计划': '阅读与表达', '识字计划': '趣味识字',
+    '拼音计划': '拼音启蒙', '书写计划': '规范书写', '美术本绘画计划': '创意美术'
+  };
+  const defaultSubjects = {
+    '学期计划': '健康,语言,社会,科学,艺术', '语言计划': '语言', '识字计划': '语言',
+    '拼音计划': '语言', '书写计划': '语言', '美术本绘画计划': '艺术'
+  };
+  const newPlan = {
+    id: Date.now(),
+    group: document.getElementById('planGroup').value,
+    planType: planType,
+    semester: document.getElementById('planSemester').value,
+    theme: document.getElementById('planTheme').value || (defaultThemes[planType] || '新计划'),
+    subjects: document.getElementById('planSubjects').value || (defaultSubjects[planType] || '综合'),
+    progress: 0, status: '筹备中',
+    createdAt: new Date().toISOString().split('T')[0],
+    weeks: parseInt(document.getElementById('planWeeks').value) || 16,
+    finished: 0,
+    classes: (getKinderGroups()[document.getElementById('planGroup').value] || ['待分配']),
+  };
+  store.teachingPlans.unshift(newPlan);
+  saveStore(); closeModal();
+  toast('✅ 级组计划已生成');
+  renderPlanList();
+}
+
+function viewPlanDetail(id) {
+  const p = store.teachingPlans.find(pl => pl.id === id);
+  if (!p) return;
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📋 计划详情</div>
+    <div class="rich-card">
+      <b>${p.planType} · ${p.theme}</b>
+      <div style="margin-top:8px;font-size:13px;line-height:1.8">
+        级组：${p.group}<br>
+        覆盖班级：${p.classes.join('、')}<br>
+        学期：${p.semester}<br>
+        领域：${p.subjects}<br>
+        总周数：${p.weeks} 周<br>
+        已完成：${p.finished} 周<br>
+        完成率：${p.progress}%<br>
+        状态：${p.status}<br>
+        创建时间：${p.createdAt}
+      </div>
+      ${p.attFileName ? '<div style="margin-top:8px;padding:8px;background:#F0F4FF;border-radius:6px;font-size:12px">📎 附件：' + p.attFileName + (p.attFileSize ? ' (' + formatFileSize(p.attFileSize) + ')' : '') + (p.attFileData ? ' <button class="btn btn-sm" style="padding:2px 6px;font-size:11px;color:var(--accent2)" onclick="viewAttachedFile(\'' + p.attFileName + '\', \'' + p.attFileData + '\')">查看</button>' : '') + '</div>' : ''}
+    </div>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function updatePlanProgress(id) {
+  const p = store.teachingPlans.find(pl => pl.id === id);
+  if (!p) return;
+  const newFinished = Math.round((Math.min(p.finished + 1, p.weeks)) * 10) / 10;
+  const newProgress = Math.round((newFinished / p.weeks) * 100);
+  p.finished = newFinished;
+  p.progress = newProgress;
+  if (newProgress >= 100) p.status = '已完成';
+  else p.status = '进行中';
+  saveStore();
+  toast('✅ 进度已更新（+' + (newFinished > p.finished ? '1' : '0') + '周）');
+  renderPlanList();
+}
+
+function editPlan(id) {
+  const p = store.teachingPlans.find(pl => pl.id === id);
+  if (!p) return;
+  document.getElementById("modalBox").innerHTML = "<div class=\"modal-title\">✏️ 编辑级组计划</div>" +
+    "<div class=\"form-group\"><label class=\"form-label\">计划类型</label><select class=\"form-input form-select\" id=\"editPlanType\">" +
+    "<option " + (p.planType==="学期计划"?"selected":"") + ">学期计划</option><option " + (p.planType==="语言计划"?"selected":"") + ">语言计划</option>" +
+    "<option " + (p.planType==="识字计划"?"selected":"") + ">识字计划</option><option " + (p.planType==="拼音计划"?"selected":"") + ">拼音计划</option>" +
+    "<option " + (p.planType==="书写计划"?"selected":"") + ">书写计划</option><option " + (p.planType==="美术本绘画计划"?"selected":"") + ">美术本绘画计划</option>" +
+    "</select></div>" +
+    "<div class=\"form-group\"><label class=\"form-label\">主题</label><input class=\"form-input\" id=\"editPlanTheme\" value=\"" + p.theme + "\"></div>" +
+    "<div class=\"form-group\"><label class=\"form-label\">领域</label><input class=\"form-input\" id=\"editPlanSubjects\" value=\"" + p.subjects + "\"></div>" +
+    "<div class=\"form-group\"><label class=\"form-label\">覆盖班级</label><input class=\"form-input\" id=\"editPlanClasses\" value=\"" + p.classes.join(",") + "\"></div>" +
+    "<div class=\"form-group\"><label class=\"form-label\">总周数</label><input class=\"form-input\" id=\"editPlanWeeks\" type=\"number\" value=\"" + p.weeks + "\"></div>" +
+    "<div class=\"form-group\"><label class=\"form-label\">完成周数</label><input class=\"form-input\" id=\"editPlanFinished\" type=\"number\" value=\"" + p.finished + "\"></div>" +
+    "<div class=\"form-group\"><label class=\"form-label\">📎 上传计划文件（拍照/PDF/Word）</label><input type=\"file\" id=\"editPlanFile\" accept=\"image/*,.pdf,.doc,.docx\" style=\"font-size:13px;padding:4px\" onchange=\"previewEditPlanFile()\"></div>" +
+    "<div id=\"editPlanFilePreview\" style=\"font-size:11px;color:var(--accent3);margin-top:4px\"></div>" +
+    "<button class=\"btn btn-primary btn-block\" onclick=\"saveEditPlan(" + p.id + ")\">💾 保存修改</button>" +
+    "<button class=\"btn btn-block\" style=\"background:#f0f0f0;margin-top:6px\" onclick=\"deletePlan(" + p.id + ")\">🗑️ 删除此计划</button>";
+  document.getElementById("modalMask").classList.add("active");
+}
+
+function saveEditPlan(id) {
+  const p = store.teachingPlans.find(pl => pl.id === id);
+  if (!p) return;
+  p.planType = document.getElementById("editPlanType").value;
+  p.theme = document.getElementById("editPlanTheme").value || p.theme;
+  p.subjects = document.getElementById("editPlanSubjects").value || p.subjects;
+  p.classes = document.getElementById("editPlanClasses").value.split(/[,，]/).map(c => c.trim()).filter(c => c);
+  p.weeks = parseInt(document.getElementById("editPlanWeeks").value) || p.weeks;
+  p.finished = Math.min(parseInt(document.getElementById("editPlanFinished").value) || p.finished, p.weeks);
+  p.progress = Math.round((p.finished / p.weeks) * 100);
+  if (p.progress >= 100) p.status = "已完成"; else if (p.progress > 0) p.status = "进行中";
+  // 处理编辑时上传的文件
+  handleEditPlanFile(p);
+  saveStore(); closeModal(); toast("✅ 计划已更新"); renderPlanList();
+}
+
+function deletePlan(id) {
+  const p = store.teachingPlans.find(pl => pl.id === id);
+  if (!p) return;
+  if (confirm("确定要删除计划\"" + p.theme + "\"吗？此操作不可恢复。")) {
+    store.teachingPlans = store.teachingPlans.filter(pl => pl.id !== id);
+    saveStore(); toast("🗑️ 计划已删除"); renderPlanList(); closeModal();
+  }
+}
+
+function showAddTodoModal() {
+  document.getElementById('modalBox').innerHTML = '<div class="modal-title">\n📝 新增待办事项</div>' +
+    '<div class="form-group"><label class="form-label">事项名称</label><input class="form-input" id="todoTitle" placeholder="如：完成大班语言计划初稿"></div>' +
+    '<div class="form-group"><label class="form-label">优先级</label><select class="form-input form-select" id="todoPriority"><option>普通</option><option>紧急</option></select></div>' +
+    '<div class="form-group"><label class="form-label">截止日期</label><input class="form-input" id="todoDeadline" type="date"></div>' +
+    '<div class="form-group"><label class="form-label">备注</label><input class="form-input" id="todoNote" placeholder="可选"></div>' +
+    '<button class="btn btn-primary btn-block" onclick="addTodo()">✅ 创建待办</button>';
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addTodo() {
+  const title = document.getElementById('todoTitle').value.trim();
+  if (!title) { toast('⚠️ 请输入事项名称'); return; }
+  store.todoItems.unshift({
+    id: Date.now(), title: title,
+    priority: document.getElementById('todoPriority').value,
+    deadline: document.getElementById('todoDeadline').value,
+    note: document.getElementById('todoNote').value.trim(),
+    status: '进行中', kindergarten: currentKinder,
+    createdAt: new Date().toISOString().split('T')[0]
+  });
+  saveStore(); closeModal(); toast('✅ 待办已添加'); renderDashboard();
+}
+
+function toggleTodo(id) {
+  const t = store.todoItems.find(td => td.id === id);
+  if (!t) return;
+  t.status = t.status === '已完成' ? '进行中' : '已完成';
+  saveStore();
+  toast(t.status === '已完成' ? '✅ 已标记完成' : '🔄 已恢复为进行中');
+  renderDashboard();
+}
+
+function deleteTodo(id) {
+  if (!confirm('确定删除此待办事项吗？')) return;
+  store.todoItems = store.todoItems.filter(t => t.id !== id);
+  saveStore(); toast('🗑️ 已删除'); renderDashboard();
+}
+
+// ===== 日历管理 =====
+function renderCalendar() {
+  const k = getKinder();
+  document.getElementById('pageTitle').textContent = k.name + ' · 日历';
+  const now = new Date();
+  if (!calendarYear) { calendarYear = now.getFullYear(); calendarMonth = now.getMonth() + 1; }
+
+  const todayStr = now.toISOString().split('T')[0];
+  const firstDay = new Date(calendarYear, calendarMonth - 1, 1);
+  const lastDay = new Date(calendarYear, calendarMonth, 0);
+  const startDow = firstDay.getDay(); // 0=日
+  const totalDays = lastDay.getDate();
+  const prevLastDay = new Date(calendarYear, calendarMonth - 1, 0).getDate();
+
+  // Build date-to-todos map
+  const dateTodos = {};
+  kf(store.todoItems).filter(t => t.deadline).forEach(t => {
+    if (!dateTodos[t.deadline]) dateTodos[t.deadline] = [];
+    dateTodos[t.deadline].push(t);
+  });
+
+  let html = `<div class="calendar">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="calPrevMonth()">◀</button>
+      <span class="cal-title">${calendarYear}年${calendarMonth}月</span>
+      <button class="cal-nav" onclick="calNextMonth()">▶</button>
+    </div>
+    <div class="cal-weekdays">
+      <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+    </div>
+    <div class="cal-grid">`;
+
+  // Previous month filler days
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = prevLastDay - i;
+    const ds = `${calendarMonth === 1 ? calendarYear - 1 : calendarYear}-${String(calendarMonth === 1 ? 12 : calendarMonth - 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<div class="cal-day other-month" onclick="calNavToDate('${ds}')">${d}</div>`;
+  }
+
+  // Current month days
+  for (let d = 1; d <= totalDays; d++) {
+    const ds = `${calendarYear}-${String(calendarMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = ds === todayStr;
+    const isSelected = ds === calSelectedDate;
+    const cls = ['cal-day'];
+    if (isToday) cls.push('today');
+    if (isSelected) cls.push('selected');
+
+    // Build dots for this date
+    let dotsHTML = '';
+    const tdList = dateTodos[ds] || [];
+    if (tdList.length > 0) {
+      const maxShow = Math.min(tdList.length, 3);
+      dotsHTML = '<div class="cal-dots">';
+      for (let i = 0; i < maxShow; i++) {
+        const t = tdList[i];
+        const dotClass = t.priority === '紧急' ? 'urgent' : (t.status === '已完成' ? 'normal' : 'normal');
+        dotsHTML += `<span class="cal-dot ${dotClass}"></span>`;
+      }
+      if (tdList.length > 3) dotsHTML += `<span style="font-size:9px;color:var(--text-light);margin-left:1px">+${tdList.length - 3}</span>`;
+      dotsHTML += '</div>';
+    }
+
+    html += `<div class="${cls.join(' ')}" onclick="calSelectDate('${ds}')">${d}${dotsHTML}</div>`;
+  }
+
+  // Next month filler days
+  const endDow = lastDay.getDay();
+  for (let i = 1; i < 7 - endDow; i++) {
+    const ds = `${calendarMonth === 12 ? calendarYear + 1 : calendarYear}-${String(calendarMonth === 12 ? 1 : calendarMonth + 1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+    html += `<div class="cal-day other-month" onclick="calNavToDate('${ds}')">${i}</div>`;
+  }
+
+  html += `</div></div>`;
+
+  // Selected date todo list
+  if (calSelectedDate) {
+    const selTodos = dateTodos[calSelectedDate] || [];
+    html += `<div class="card cal-todo-list">
+      <div class="cal-todo-date">📅 ${calSelectedDate} 的待办事项
+        <button class="btn btn-primary btn-sm" style="padding:3px 10px;font-size:11px;float:right" onclick="showCalendarTodoModal('${calSelectedDate}')">➕ 添加</button>
+      </div>`;
+    if (selTodos.length) {
+      selTodos.forEach(t => {
+        const isUrgent = t.priority === '紧急';
+        html += `<div class="list-item" style="cursor:pointer" onclick="toggleTodo(${t.id})">
+          <div class="li-icon" style="background:${isUrgent ? '#FFF0F0' : '#F0F4FF'};color:${isUrgent ? 'var(--primary)' : 'var(--accent2)'}">${isUrgent ? '🔴' : '📌'}</div>
+          <div class="li-info" style="flex:1">
+            <div class="li-title" style="${t.status==='已完成'?'text-decoration:line-through;color:var(--text-light)':''}">${t.title}</div>
+            <div class="li-sub">${t.note ? t.note + ' · ' : ''}${t.priority === '紧急' ? '紧急' : '普通'}</div>
+          </div>
+          <span class="tag ${t.status==='已完成'?'green':(t.priority==='紧急'?'red':'blue')}" style="font-size:10px">${t.status==='已完成'?'已完成':(t.priority==='紧急'?'紧急':'待完成')}</span>
+          <button class="btn btn-sm" style="background:none;font-size:14px;padding:2px 6px;margin-left:4px" onclick="event.stopPropagation();deleteTodoFromCal(${t.id})">🗑️</button>
+        </div>`;
+      });
+    } else {
+      html += '<div class="empty"><div class="empty-text">该日期暂无待办，点击"➕ 添加"创建</div></div>';
+    }
+    html += '</div>';
+  } else {
+    html += '<div class="empty"><div class="empty-text" style="padding:20px">👆 点击日历中的日期查看或添加待办事项</div></div>';
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function calSelectDate(ds) {
+  calSelectedDate = ds;
+  renderCalendar();
+}
+
+function calNavToDate(ds) {
+  calendarYear = parseInt(ds.split('-')[0]);
+  calendarMonth = parseInt(ds.split('-')[1]);
+  calSelectedDate = ds;
+  renderCalendar();
+}
+
+function calPrevMonth() {
+  if (calendarMonth === 1) { calendarYear--; calendarMonth = 12; }
+  else calendarMonth--;
+  renderCalendar();
+}
+
+function calNextMonth() {
+  if (calendarMonth === 12) { calendarYear++; calendarMonth = 1; }
+  else calendarMonth++;
+  renderCalendar();
+}
+
+function showCalendarTodoModal(date) {
+  document.getElementById('modalBox').innerHTML = '<div class="modal-title">\n📝 新增待办事项</div>' +
+    '<div class="form-group"><label class="form-label">事项名称</label><input class="form-input" id="todoTitle" placeholder="如：完成大班语言计划初稿"></div>' +
+    '<div class="form-group"><label class="form-label">优先级</label><select class="form-input form-select" id="todoPriority"><option>普通</option><option>紧急</option></select></div>' +
+    '<div class="form-group"><label class="form-label">截止日期</label><input class="form-input" id="todoDeadline" type="date" value="' + date + '"></div>' +
+    '<div class="form-group"><label class="form-label">备注</label><input class="form-input" id="todoNote" placeholder="可选"></div>' +
+    '<button class="btn btn-primary btn-block" onclick="addTodoFromCal()">✅ 创建待办</button>';
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addTodoFromCal() {
+  const title = document.getElementById('todoTitle').value.trim();
+  if (!title) { toast('⚠️ 请输入事项名称'); return; }
+  store.todoItems.unshift({
+    id: Date.now(), title: title,
+    priority: document.getElementById('todoPriority').value,
+    deadline: document.getElementById('todoDeadline').value,
+    note: document.getElementById('todoNote').value.trim(),
+    status: '进行中', kindergarten: currentKinder,
+    createdAt: new Date().toISOString().split('T')[0]
+  });
+  saveStore(); closeModal(); toast('✅ 待办已添加'); calSelectedDate = document.getElementById('todoDeadline').value; renderCalendar();
+}
+
+function deleteTodoFromCal(id) {
+  if (!confirm('确定删除此待办事项吗？')) return;
+  store.todoItems = store.todoItems.filter(t => t.id !== id);
+  saveStore(); toast('🗑️ 已删除'); renderCalendar();
+}
+
+// ===== 巡班记录管理 =====
+function getWeekStart(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  d.setDate(d.getDate() - diff);
+  return d.toISOString().split('T')[0];
+}
+
+function getWeekEnd(dateStr) {
+  const d = new Date(getWeekStart(dateStr) + 'T00:00:00');
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().split('T')[0];
+}
+
+function showAddPatrolModal() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('modalBox').innerHTML = '<div class="modal-title">\n🔍 新增巡班记录</div>' +
+    '<div class="form-group"><label class="form-label">日期</label><input class="form-input" id="patrolDate" type="date" value="' + today + '"></div>' +
+    '<div class="form-group"><label class="form-label">巡查区域/项目</label><input class="form-input" id="patrolArea" placeholder="如：大一班教室、户外活动区、食堂"></div>' +
+    '<div class="form-group"><label class="form-label">检查结果</label><select class="form-input form-select" id="patrolResult"><option>合格</option><option>需整改</option><option>严重问题</option></select></div>' +
+    '<div class="form-group"><label class="form-label">文字描述</label><textarea class="form-input form-textarea" id="patrolNote" placeholder="记录具体情况..." style="height:70px"></textarea></div>' +
+    '<div class="form-group"><label class="form-label">拍照/视频（可选）</label>' +
+      '<input type="file" id="patrolMedia" accept="image/*,video/*" capture="environment" onchange="previewPatrolMedia()" style="font-size:13px;margin-top:4px">' +
+      '<div id="patrolMediaPreview" style="margin-top:6px"></div>' +
+    '</div>' +
+    '<button class="btn btn-primary btn-block" onclick="addPatrolRecord()">✅ 保存记录</button>';
+  document.getElementById('modalMask').classList.add('active');
+  window._patrolMediaData = '';
+  window._patrolMediaType = '';
+  window._patrolMediaName = '';
+}
+
+function previewPatrolMedia() {
+  const input = document.getElementById('patrolMedia');
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  if (file.size > 15 * 1024 * 1024) { toast('⚠️ 文件不能超过15MB'); input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    window._patrolMediaData = e.target.result;
+    window._patrolMediaType = file.type.startsWith('video') ? 'video' : 'photo';
+    window._patrolMediaName = file.name;
+    const preview = document.getElementById('patrolMediaPreview');
+    if (file.type.startsWith('video')) {
+      preview.innerHTML = '<div style="font-size:12px;color:var(--accent2)">\n🎬 ' + file.name + ' (' + formatFileSize(file.size) + ')</div>';
+    } else {
+      preview.innerHTML = '<img src="' + e.target.result + '" style="max-width:100%;max-height:120px;border-radius:8px"><div style="font-size:11px;color:var(--text-light);margin-top:2px">' + file.name + ' (' + formatFileSize(file.size) + ')</div>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function addPatrolRecord() {
+  const date = document.getElementById('patrolDate').value || new Date().toISOString().split('T')[0];
+  const area = document.getElementById('patrolArea').value.trim() || '全园巡查';
+  const result = document.getElementById('patrolResult').value;
+  const note = document.getElementById('patrolNote').value.trim();
+
+  store.patrolRecords.unshift({
+    id: Date.now(),
+    date: date,
+    time: new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'}),
+    kindergarten: currentKinder,
+    area: area,
+    result: result,
+    note: note,
+    mediaType: window._patrolMediaType || '',
+    mediaData: window._patrolMediaData || '',
+    mediaFileName: window._patrolMediaName || '',
+    status: result === '合格' ? '已记录' : '待跟进',
+    createdAt: new Date().toISOString()
+  });
+  window._patrolMediaData = '';
+  window._patrolMediaType = '';
+  window._patrolMediaName = '';
+  saveStore(); closeModal(); toast('✅ 巡班记录已保存');
+  if (currentModule === 'dashboard') renderDashboard();
+  else renderAllPatrolRecords();
+}
+
+function deletePatrolRecord(id) {
+  if (!confirm('确定删除此条巡班记录吗？')) return;
+  store.patrolRecords = store.patrolRecords.filter(r => r.id !== id);
+  saveStore(); toast('🗑️ 已删除');
+  if (currentModule === 'dashboard') renderDashboard();
+  else renderAllPatrolRecords();
+}
+
+function viewPatrolMedia(id) {
+  const r = store.patrolRecords.find(pr => pr.id === id);
+  if (!r || !r.mediaData) return;
+  if (r.mediaType === 'photo') {
+    document.getElementById('modalBox').innerHTML = '<div class="modal-title">\n📷 巡查照片</div>' +
+      '<img src="' + r.mediaData + '" style="max-width:100%;max-height:70vh;border-radius:8px">' +
+      '<div style="margin-top:8px;font-size:12px;text-align:center;color:var(--text-secondary)">' + (r.mediaFileName || '') + '</div>' +
+      '<button class="btn btn-outline btn-block" style="margin-top:8px" onclick="closeModal()">关闭</button>';
+  } else {
+    document.getElementById('modalBox').innerHTML = '<div class="modal-title">\n🎬 巡查视频</div>' +
+      '<video controls style="max-width:100%;max-height:70vh;border-radius:8px"><source src="' + r.mediaData + '"></video>' +
+      '<div style="margin-top:8px;font-size:12px;text-align:center;color:var(--text-secondary)">' + (r.mediaFileName || '') + '</div>' +
+      '<button class="btn btn-outline btn-block" style="margin-top:8px" onclick="closeModal()">关闭</button>';
+  }
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function renderAllPatrolRecords() {
+  const k = getKinder();
+  document.getElementById('pageTitle').textContent = k.name + ' · 巡班记录';
+  const records = kf(store.patrolRecords);
+  let html = '<div class="card"><div class="card-header"><span class="card-title">📂 全部巡班记录</span>' +
+    '<button class="btn btn-primary btn-sm" onclick="showAddPatrolModal()">➕ 记录</button></div>';
+
+  if (records.length) {
+    // Group by date
+    const dateMap = {};
+    records.forEach(r => {
+      if (!dateMap[r.date]) dateMap[r.date] = [];
+      dateMap[r.date].push(r);
+    });
+    Object.keys(dateMap).sort((a,b) => b.localeCompare(a)).forEach(date => {
+      html += '<div style="font-size:13px;font-weight:700;margin:10px 0 6px;color:var(--text)">\n📅 ' + date + '（共' + dateMap[date].length + '条）</div>';
+      dateMap[date].forEach(r => {
+        const typeClass = r.mediaType === 'photo' ? 'photo' : r.mediaType === 'video' ? 'video' : 'text';
+        const typeIcon = r.mediaType === 'photo' ? '\n📷' : r.mediaType === 'video' ? '\n🎬' : '\n📝';
+        const resultBadge = r.result === '严重问题' ? 'serious' : r.result === '需整改' ? 'minor' : 'ok';
+        html += '<div class="patrol-item">' +
+          '<div class="patrol-type ' + typeClass + '">' + typeIcon + '</div>' +
+          '<div class="patrol-info">' +
+            '<div class="patrol-title">' + r.area + ' · <span class="issue-badge ' + resultBadge + '">' + r.result + '</span></div>' +
+            '<div class="patrol-meta">\n🕐 ' + r.time + '</div>' +
+            (r.note ? '<div class="patrol-note">' + r.note + '</div>' : '') +
+            (r.mediaData ? (r.mediaType === 'photo'
+              ? '<img class="patrol-thumb" src="' + r.mediaData + '" onclick="viewPatrolMedia(' + r.id + ')">'
+              : '<div style="font-size:12px;color:var(--accent2);margin-top:4px;cursor:pointer" onclick="viewPatrolMedia(' + r.id + ')">\n🎬 查看视频</div>') : '') +
+          '</div>' +
+          '<button class="btn btn-sm" style="background:none;font-size:14px;padding:2px 6px" onclick="event.stopPropagation();deletePatrolRecord(' + r.id + ')">\n🗑️</button>' +
+        '</div>';
+      });
+    });
+  } else {
+    html += '<div class="empty"><div class="empty-text">暂无巡班记录</div></div>';
+  }
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+// 周工作检查日志
+function renderWeeklyReport() {
+  const k = getKinder();
+  document.getElementById('pageTitle').textContent = k.name + ' · 周工作检查日志';
+  const today = new Date().toISOString().split('T')[0];
+  const ws = getWeekStart(today);
+  const we = getWeekEnd(today);
+  const weekRecords = kf(store.patrolRecords).filter(r => r.date >= ws && r.date <= we);
+
+  let html = '<div class="card"><div class="card-header"><span class="card-title">📋 周工作检查日志</span></div>' +
+    '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">周期：' + ws + '（周一） ~ ' + we + '（周日）</div>';
+
+  // Statistics
+  const issueRecords = weekRecords.filter(r => r.result !== '合格');
+  const seriousIssues = issueRecords.filter(r => r.result === '严重问题');
+  const minorIssues = issueRecords.filter(r => r.result === '需整改');
+
+  html += '<div class="stats-grid" style="margin-bottom:12px">' +
+    '<div class="stat-card"><div class="stat-icon" style="background:#F0F4FF;color:var(--accent2)">\n📊</div><div><div class="stat-num">' + weekRecords.length + '</div><div class="stat-label">巡查总次数</div></div></div>' +
+    '<div class="stat-card"><div class="stat-icon" style="background:#FFF0F0;color:var(--primary)">\n⚠️</div><div><div class="stat-num">' + issueRecords.length + '</div><div class="stat-label">问题项</div></div></div>' +
+    '<div class="stat-card"><div class="stat-icon" style="background:#FFF5F5;color:var(--primary)">\n🔴</div><div><div class="stat-num">' + seriousIssues.length + '</div><div class="stat-label">严重问题</div></div></div>' +
+    '<div class="stat-card"><div class="stat-icon" style="background:#FFF9F0;color:var(--accent)">\n🟡</div><div><div class="stat-num">' + minorIssues.length + '</div><div class="stat-label">需整改</div></div></div>' +
+    '</div>';
+
+  // Issues list
+  if (issueRecords.length) {
+    html += '<div style="font-size:14px;font-weight:700;margin:12px 0 8px">\n⚠️ 本周发现的问题</div>';
+    html += '<div style="background:#FFFBF0;border-radius:10px;padding:10px">';
+    issueRecords.forEach(r => {
+      html += '<div style="padding:6px 0;border-bottom:1px solid #f0e6d0">' +
+        '<div style="font-size:13px;font-weight:600">\n📅 ' + r.date + ' · ' + r.area + '</div>' +
+        '<div style="font-size:12px;color:var(--text-secondary)">问题：' + (r.note || r.result) + ' <span class="issue-badge ' + (r.result === '严重问题' ? 'serious' : 'minor') + '">' + r.result + '</span></div>' +
+        '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div style="background:#F0FFF4;border-radius:10px;padding:16px;text-align:center">' +
+      '<div style="font-size:32px">\n🎉</div><div style="font-size:14px;font-weight:600;color:var(--accent3)">本周未发现问题，全部合格！</div></div>';
+  }
+
+  // All records by date
+  if (weekRecords.length) {
+    html += '<div style="font-size:14px;font-weight:700;margin:12px 0 8px">\n📅 每日巡查详情</div>';
+    const dateMap = {};
+    weekRecords.forEach(r => {
+      if (!dateMap[r.date]) dateMap[r.date] = [];
+      dateMap[r.date].push(r);
+    });
+    Object.keys(dateMap).sort().forEach(date => {
+      html += '<div style="font-size:12px;font-weight:600;color:var(--text);margin:8px 0 4px">' + date + '（' + ['日','一','二','三','四','五','六'][new Date(date+'T00:00:00').getDay()] + '）</div>';
+      dateMap[date].forEach(r => {
+        const resultBadge = r.result === '严重问题' ? 'serious' : r.result === '需整改' ? 'minor' : 'ok';
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">' +
+          '<span class="issue-badge ' + resultBadge + '">' + r.result + '</span>' +
+          '<span>' + r.area + '</span>' +
+          (r.note ? '<span style="color:var(--text-secondary)">- ' + r.note.substring(0,30) + (r.note.length>30?'...':'') + '</span>' : '') +
+          '</div>';
+      });
+    });
+  }
+
+  html += '</div>';
+
+  // 保存周报到 store
+  const existing = store.weeklyReports.find(wr => wr.weekStart === ws && wr.kindergarten === currentKinder);
+  if (!existing) {
+    store.weeklyReports.push({
+      id: Date.now(),
+      weekStart: ws, weekEnd: we,
+      kindergarten: currentKinder,
+      generatedAt: new Date().toISOString(),
+      totalRecords: weekRecords.length,
+      issueCount: issueRecords.length,
+      seriousCount: seriousIssues.length,
+      minorCount: minorIssues.length,
+      summary: '本周巡查' + weekRecords.length + '次，发现问题' + issueRecords.length + '项（严重' + seriousIssues.length + '项，需整改' + minorIssues.length + '项）'
+    });
+    saveStore();
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+// ===== 文件上传工具函数 =====
+function readFileAsDataURL(fileInputId, callback) {
+  const input = document.getElementById(fileInputId);
+  if (!input || !input.files || input.files.length === 0) { callback(null); return; }
+  const file = input.files[0];
+  if (file.size > 10 * 1024 * 1024) { toast('⚠️ 文件不能超过10MB'); callback(null); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) { callback({ name: file.name, size: file.size, type: file.type, data: e.target.result }); };
+  reader.readAsDataURL(file);
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+}
+
+function previewPlanFile() {
+  const input = document.getElementById('planFile');
+  if (input && input.files && input.files.length > 0) {
+    document.getElementById('planFilePreview').innerHTML = '📄 ' + input.files[0].name + ' (' + formatFileSize(input.files[0].size) + ')';
+  }
+}
+
+function previewEditPlanFile() {
+  const input = document.getElementById('editPlanFile');
+  if (input && input.files && input.files.length > 0) {
+    document.getElementById('editPlanFilePreview').innerHTML = '📄 ' + input.files[0].name + ' (' + formatFileSize(input.files[0].size) + ')';
+  }
+}
+
+function previewActFile() {
+  const input = document.getElementById('actFile');
+  if (input && input.files && input.files.length > 0) {
+    document.getElementById('actFilePreview').innerHTML = '📸 ' + input.files[0].name + ' (' + formatFileSize(input.files[0].size) + ')';
+  }
+}
+
+function previewEditActFile() {
+  const input = document.getElementById('editActFile');
+  if (input && input.files && input.files.length > 0) {
+    document.getElementById('editActFilePreview').innerHTML = '📸 ' + input.files[0].name + ' (' + formatFileSize(input.files[0].size) + ')';
+  }
+}
+
+function handlePlanFile(planObj) {
+  const input = document.getElementById('planFile');
+  if (!input || !input.files || input.files.length === 0) return;
+  const file = input.files[0];
+  if (file.size > 10 * 1024 * 1024) { toast('⚠️ 文件超过10MB，将仅保存文件名'); planObj.attFileName = file.name; planObj.attFileSize = file.size; return; }
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  planObj.attFileName = file.name;
+  planObj.attFileSize = file.size;
+  planObj.attFileType = file.type;
+  planObj._pendingFileReader = reader;
+}
+
+function handleEditPlanFile(planObj) {
+  const input = document.getElementById('editPlanFile');
+  if (!input || !input.files || input.files.length === 0) return;
+  const file = input.files[0];
+  if (file.size > 10 * 1024 * 1024) { toast('⚠️ 文件超过10MB，将仅保存文件名'); planObj.attFileName = file.name; planObj.attFileSize = file.size; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    planObj.attFileData = e.target.result;
+    planObj.attFileName = file.name;
+    planObj.attFileSize = file.size;
+    planObj.attFileType = file.type;
+    saveStore();
+  };
+  reader.readAsDataURL(file);
+  planObj.attFileName = file.name;
+  planObj.attFileSize = file.size;
+  planObj.attFileType = file.type;
+  planObj._pendingFileReader = reader;
+}
+
+function handleActFile(actObj) {
+  const input = document.getElementById('actFile');
+  if (!input || !input.files || input.files.length === 0) return;
+  const file = input.files[0];
+  if (file.size > 10 * 1024 * 1024) { toast('⚠️ 文件超过10MB，将仅保存文件名'); actObj.attFileName = file.name; actObj.attFileSize = file.size; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    actObj.attFileData = e.target.result;
+    actObj.attFileName = file.name;
+    actObj.attFileSize = file.size;
+    actObj.attFileType = file.type;
+    saveStore();
+  };
+  reader.readAsDataURL(file);
+  actObj.attFileName = file.name;
+  actObj.attFileSize = file.size;
+  actObj.attFileType = file.type;
+}
+
+function handleEditActFile(actObj) {
+  const input = document.getElementById('editActFile');
+  if (!input || !input.files || input.files.length === 0) return;
+  const file = input.files[0];
+  if (file.size > 10 * 1024 * 1024) { toast('⚠️ 文件超过10MB，将仅保存文件名'); actObj.attFileName = file.name; actObj.attFileSize = file.size; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    actObj.attFileData = e.target.result;
+    actObj.attFileName = file.name;
+    actObj.attFileSize = file.size;
+    actObj.attFileType = file.type;
+    saveStore();
+  };
+  reader.readAsDataURL(file);
+  actObj.attFileName = file.name;
+  actObj.attFileSize = file.size;
+  actObj.attFileType = file.type;
+}
+
+function viewAttachedFile(attFileName, attFileData) {
+  if (!attFileData) { toast('⚠️ 无附件数据'); return; }
+  const isImage = attFileData.startsWith('data:image/');
+  if (isImage) {
+    document.getElementById('modalBox').innerHTML = '<div class="modal-title">📸 ' + attFileName + '</div>' +
+      '<div style="text-align:center"><img src="' + attFileData + '" style="max-width:100%;max-height:70vh;border-radius:8px"></div>' +
+      '<button class="btn btn-primary btn-block" style="margin-top:10px" onclick="downloadFileData(\'' + attFileName + '\')">⬇ 下载</button>';
+  } else {
+    document.getElementById('modalBox').innerHTML = '<div class="modal-title">📄 ' + attFileName + '</div>' +
+      '<div style="padding:16px;text-align:center;color:var(--text-secondary)">文件已保存到工作台<br><br>📎 ' + attFileName + '</div>' +
+      '<button class="btn btn-primary btn-block" onclick="downloadFileData(\'' + attFileName + '\')">⬇ 下载</button>';
+  }
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function downloadFileData(fileName) {
+  // Find the file data from the opened modal
+  const img = document.querySelector('#modalBox img');
+  if (img && img.src && img.src.startsWith('data:')) {
+    const a = document.createElement('a');
+    a.href = img.src;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast('📥 下载中...');
+  } else {
+    toast('⚠️ 暂不支持下载此类型文件');
+  }
+}
+
+// 处理 addTeachingPlan 中 FileReader 延迟完成的情况
+function finalizePlanFile(planObj) {
+  if (!planObj._pendingFileReader) return;
+  const reader = planObj._pendingFileReader;
+  reader.onload = function(e) {
+    planObj.attFileData = e.target.result;
+    delete planObj._pendingFileReader;
+    saveStore();
+  };
+}
+
+function renderCourseResources() {
+  const categories = ['全部', '教案', '课件', '素材', '优质课'];
+  const qualityCount = kf(store.courseResources).filter(r => r.isQuality).length;
+  const totalDownloads = kf(store.courseResources).reduce((s,r)=>s+r.downloads,0);
+  const popular = [...kf(store.courseResources)].sort((a,b)=>b.downloads-a.downloads)[0];
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📁 课程资源库</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddResourceModal()">+ 上传资源</button>
+    </div>
+    <div class="search-bar">
+      <input type="text" placeholder="🔍 搜索教案、课件、素材..." id="resSearch" oninput="filterResources()">
+    </div>
+    <div class="chip-group" style="margin-bottom:10px" id="resCatChips">
+      ${categories.map((c,i) => `<span class="chip ${i===0?'active':''}" onclick="filterResCat('${c}', this)">${c}${c==='优质课'?' ('+qualityCount+')':''}</span>`).join('')}
+    </div>
+    <div id="resList"></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:8px;font-size:14px">📊 资源利用率统计</div>
+    <div style="font-size:13px;color:var(--text-secondary)">
+      总资源数：<b>${kf(store.courseResources).length}</b> 份<br>
+      优质课资源：<b>${qualityCount}</b> 份<br>
+      总下载次数：<b>${totalDownloads}</b> 次<br>
+      最受欢迎：<b>${popular?.title || '暂无'}</b>
+    </div>
+  </div>`;
+  document.getElementById('mainContent').innerHTML = html;
+  renderResList('全部');
+}
+
+function filterResources() {
+  const q = document.getElementById('resSearch').value.toLowerCase();
+  const items = kf(store.courseResources).filter(r => r.title.toLowerCase().includes(q) || r.author.includes(q) || r.tags.some(t=>t.includes(q)));
+  renderResListDOM(items);
+}
+
+function filterResCat(cat, el) {
+  document.querySelectorAll('#resCatChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderResList(cat);
+}
+
+function renderResList(cat) {
+  let items;
+  if (cat === '全部') items = kf(store.courseResources);
+  else if (cat === '优质课') items = kf(store.courseResources).filter(r => r.isQuality);
+  else items = kf(store.courseResources).filter(r => r.category === cat);
+  renderResListDOM(items);
+}
+
+function renderResListDOM(items) {
+  let html = items.map(r => `
+    <div class="rich-card">
+      <div class="rc-header">
+        <b>${r.isQuality ? '⭐' : ''} ${r.title}</b>
+        <div>${r.isQuality ? `<span class="tag" style="background:#FFF3E0;color:#E65100">优质课·${r.qualityLevel}</span>` : ''}<span class="tag blue" style="margin-left:${r.isQuality?'4px':'0'}">${r.category}</span></div>
+      </div>
+      <div class="rc-body">
+        作者：${r.author} | 班级：${r.class}<br>
+        下载：${r.downloads}次 | ${r.date}
+        <div style="margin-top:4px">${r.tags.map(t=>`<span class="tag orange" style="margin-right:4px">${t}</span>`).join('')}</div>
+      </div>
+      <div class="rc-actions">
+        <button class="btn btn-outline btn-sm" onclick="editResource(${r.id})">✏️ 编辑</button>
+        <button class="btn btn-outline btn-sm" onclick="downloadResource(${r.id})">下载</button>
+        <button class="btn btn-sm" style="background:#f0f0f0" onclick="deleteResource(${r.id})">删除</button>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('resList').innerHTML = html || '<div class="empty"><div class="empty-text">暂无匹配资源</div></div>';
+}
+
+function showAddResourceModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📤 添加课程资源</div>
+    <div class="form-group"><label class="form-label">是否为优质课</label>
+      <select class="form-input form-select" id="resIsQuality" onchange="toggleQualityLevel()">
+        <option value="no">普通资源</option><option value="yes">优质课资源</option>
+      </select>
+    </div>
+    <div class="form-group" id="qualityLevelGroup" style="display:none"><label class="form-label">优质课级别</label>
+      <select class="form-input form-select" id="resQualityLevel"><option>省级</option><option>市级</option><option>区级</option><option>园级</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">标题</label><input class="form-input" id="resTitle"></div>
+    <div class="form-group"><label class="form-label">分类</label>
+      <select class="form-input form-select" id="resCat"><option>教案</option><option>课件</option><option>素材</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">作者</label><input class="form-input" id="resAuthor"></div>
+    <div class="form-group"><label class="form-label">班级</label><input class="form-input" id="resClass"></div>
+    <div class="form-group"><label class="form-label">标签（逗号分隔）</label><input class="form-input" id="resTags" placeholder="如：语言,春天"></div>
+    <div class="form-group"><label class="form-label">📎 上传文件</label><input type="file" id="resFile" style="font-size:13px;padding:4px"></div>
+    <button class="btn btn-primary btn-block" onclick="addResource()">添加资源</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function toggleQualityLevel() {
+  document.getElementById('qualityLevelGroup').style.display = document.getElementById('resIsQuality').value === 'yes' ? 'block' : 'none';
+}
+
+function addResource() {
+  const isQuality = document.getElementById('resIsQuality').value === 'yes';
+  const qualityLevel = isQuality ? document.getElementById('resQualityLevel').value : '';
+  const fileInput = document.getElementById('resFile');
+  const fileName = fileInput && fileInput.files && fileInput.files.length > 0 ? fileInput.files[0].name : '';
+  const fileSize = fileInput && fileInput.files && fileInput.files.length > 0 ? fileInput.files[0].size : 0;
+  store.courseResources.unshift({
+    id: Date.now(), title: document.getElementById('resTitle').value || '未命名资源',
+    category: document.getElementById('resCat').value, author: document.getElementById('resAuthor').value || '未知',
+    class: document.getElementById('resClass').value || '通用', downloads: 0,
+    date: new Date().toISOString().split('T')[0],
+    tags: (document.getElementById('resTags').value || '').split(',').filter(Boolean),
+    isQuality: isQuality, qualityLevel: qualityLevel, kindergarten: currentKinder,
+    fileName: fileName, fileSize: fileSize,
+  });
+  saveStore(); closeModal(); toast(fileName ? '✅ 资源文件已上传' : '✅ 资源已添加'); renderCourseResources();
+}
+
+function downloadResource(id) {
+  const r = store.courseResources.find(re => re.id === id);
+  if (r) { r.downloads++; saveStore(); toast('📥 下载成功'); renderCourseResources(); }
+}
+
+function editResource(id) {
+  const r = store.courseResources.find(re => re.id === id);
+  if (!r) return;
+  document.getElementById('modalBox').innerHTML = '<div class="modal-title">✏️ 编辑资源</div>' +
+    '<div class="form-group"><label class="form-label">标题</label><input class="form-input" id="editResTitle" value="' + r.title + '"></div>' +
+    '<div class="form-group"><label class="form-label">分类</label><select class="form-input form-select" id="editResCat">' +
+    '<option ' + (r.category==='教案'?'selected':'') + '>教案</option><option ' + (r.category==='课件'?'selected':'') + '>课件</option><option ' + (r.category==='素材'?'selected':'') + '>素材</option>' +
+    '</select></div>' +
+    '<div class="form-group"><label class="form-label">作者</label><input class="form-input" id="editResAuthor" value="' + r.author + '"></div>' +
+    '<div class="form-group"><label class="form-label">班级</label><input class="form-input" id="editResClass" value="' + r.class + '"></div>' +
+    '<div class="form-group"><label class="form-label">标签</label><input class="form-input" id="editResTags" value="' + (r.tags||[]).join(',') + '"></div>' +
+    '<button class="btn btn-primary btn-block" onclick="saveEditResource(' + r.id + ')">💾 保存修改</button>';
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function saveEditResource(id) {
+  const r = store.courseResources.find(re => re.id === id);
+  if (!r) return;
+  r.title = document.getElementById('editResTitle').value || r.title;
+  r.category = document.getElementById('editResCat').value;
+  r.author = document.getElementById('editResAuthor').value || r.author;
+  r.class = document.getElementById('editResClass').value || r.class;
+  r.tags = (document.getElementById('editResTags').value || '').split(',').filter(Boolean);
+  saveStore(); closeModal(); toast('✅ 资源已更新'); renderCourseResources();
+}
+
+function deleteResource(id) {
+  store.courseResources = store.courseResources.filter(r => r.id !== id);
+  saveStore(); toast('🗑️ 已删除'); renderCourseResources();
+}
+
+function renderActivityBoard() {
+  const statusFilter = { '未开始': 'orange', '进行中': 'blue', '已完成': 'green' };
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📅 教学活动看板</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddActivityModal()">+ 新活动</button>
+    </div>
+    <div class="tabs">
+      <span class="tab-item active" onclick="filterActivityTab('all',this)">全部</span>
+      <span class="tab-item" onclick="filterActivityTab('本周',this)">本周</span>
+      <span class="tab-item" onclick="filterActivityTab('本月',this)">本月</span>
+    </div>
+    <div id="actList"></div>
+  </div>`;
+  document.getElementById('mainContent').innerHTML = html;
+  renderActList('all');
+}
+
+function renderActList(filter) {
+  let acts = kf(store.activities);
+  const now = new Date();
+  if (filter === '本周') {
+    const start = new Date(now); start.setDate(now.getDate() - now.getDay() + 1);
+    const end = new Date(start); end.setDate(start.getDate() + 6);
+    acts = acts.filter(a => new Date(a.date) >= start && new Date(a.date) <= end);
+  } else if (filter === '本月') {
+    acts = acts.filter(a => new Date(a.date).getMonth() === now.getMonth());
+  }
+  const statusColor = { '未开始': 'orange', '进行中': 'blue', '已完成': 'green' };
+  let html = acts.map(a => `
+    <div class="rich-card">
+      <div class="rc-header">
+        <b>${a.activity}</b>
+        <span class="tag ${statusColor[a.status]}">${a.status}</span>
+      </div>
+      <div class="rc-body">
+        ${a.class} | ${a.week} | ${a.date}<br>
+        领域：${a.domain}
+      </div>
+      <div class="rc-actions">
+        <button class="btn btn-outline btn-sm" onclick="editActivity(${a.id})">✏️ 编辑</button>
+        <button class="btn btn-outline btn-sm" onclick="deleteActivity(${a.id})" style="color:var(--primary)">🗑️</button>
+        ${a.status !== '已完成' ? `<button class="btn btn-primary btn-sm" onclick="completeActivity(${a.id})">标记完成</button>` : '<span style="font-size:12px;color:var(--accent3)">✅ 已完成</span>'}
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('actList').innerHTML = html || '<div class="empty"><div class="empty-text">暂无活动</div></div>';
+}
+
+function filterActivityTab(f, el) {
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderActList(f);
+}
+
+function showAddActivityModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📅 添加活动</div>
+    <div class="form-group"><label class="form-label">班级</label><input class="form-input" id="actClass" placeholder="如：大一班"></div>
+    <div class="form-group"><label class="form-label">周次</label><input class="form-input" id="actWeek" placeholder="如：第16周"></div>
+    <div class="form-group"><label class="form-label">活动名称</label><input class="form-input" id="actName"></div>
+    <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="actDate"></div>
+    <div class="form-group"><label class="form-label">领域</label><input class="form-input" id="actDomain" placeholder="如：语言"></div>
+    <div class="form-group"><label class="form-label">📸 拍照/上传活动计划图片</label><input type="file" id="actFile" accept="image/*,.pdf" capture="environment" style="font-size:13px;padding:4px" onchange="previewActFile()"></div>
+    <div id="actFilePreview" style="font-size:11px;color:var(--accent3);margin-top:4px"></div>
+    <button class="btn btn-primary btn-block" onclick="addActivity()">添加活动</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addActivity() {
+  const newAct = {
+    id: Date.now(), class: document.getElementById('actClass').value || '未指定',
+    week: document.getElementById('actWeek').value || '第N周',
+    activity: document.getElementById('actName').value || '新活动',
+    date: document.getElementById('actDate').value || new Date().toISOString().split('T')[0],
+    domain: document.getElementById('actDomain').value || '综合', status: '未开始', kindergarten: currentKinder,
+  };
+  handleActFile(newAct);
+  store.activities.unshift(newAct);
+  saveStore(); closeModal(); toast('✅ 活动已添加'); renderActivityBoard();
+}
+
+function completeActivity(id) {
+  const act = store.activities.find(a => a.id === id);
+  if (act) { act.status = '已完成'; saveStore(); toast('✅ 已标记完成'); renderActivityBoard(); }
+}
+
+function editActivity(id) {
+  const a = store.activities.find(ac => ac.id === id);
+  if (!a) return;
+  document.getElementById("modalBox").innerHTML = '<div class="modal-title">✏️ 编辑活动</div>' +
+    '<div class="form-group"><label class="form-label">班级</label><input class="form-input" id="editActClass" value="' + a.class + '"></div>' +
+    '<div class="form-group"><label class="form-label">周次</label><input class="form-input" id="editActWeek" value="' + a.week + '"></div>' +
+    '<div class="form-group"><label class="form-label">活动名称</label><input class="form-input" id="editActName" value="' + a.activity + '"></div>' +
+    '<div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="editActDate" value="' + a.date + '"></div>' +
+    '<div class="form-group"><label class="form-label">领域</label><input class="form-input" id="editActDomain" value="' + a.domain + '"></div>' +
+    '<div class="form-group"><label class="form-label">📸 拍照/上传活动计划图片</label><input type="file" id="editActFile" accept="image/*,.pdf" capture="environment" style="font-size:13px;padding:4px" onchange="previewEditActFile()"></div>' +
+    '<div id="editActFilePreview" style="font-size:11px;color:var(--accent3);margin-top:4px"></div>' +
+    '<button class="btn btn-primary btn-block" onclick="saveEditActivity(' + a.id + ')">💾 保存修改</button>' +
+    '<button class="btn btn-block" style="background:#f0f0f0;margin-top:6px" onclick="deleteActivity(' + a.id + ')">🗑️ 删除此活动</button>';
+  document.getElementById("modalMask").classList.add("active");
+}
+
+function saveEditActivity(id) {
+  const a = store.activities.find(ac => ac.id === id);
+  if (!a) return;
+  a.class = document.getElementById("editActClass").value || a.class;
+  a.week = document.getElementById("editActWeek").value || a.week;
+  a.activity = document.getElementById("editActName").value || a.activity;
+  a.date = document.getElementById("editActDate").value || a.date;
+  a.domain = document.getElementById("editActDomain").value || a.domain;
+  saveStore(); closeModal(); toast("✅ 活动已更新"); renderActivityBoard();
+}
+
+function deleteActivity(id) {
+  const a = store.activities.find(ac => ac.id === id);
+  if (!a) return;
+  if (confirm("确定要删除活动\"" + a.activity + "\"吗？")) {
+    store.activities = store.activities.filter(ac => ac.id !== id);
+    saveStore(); toast("🗑️ 活动已删除"); renderActivityBoard();
+  }
+}
+
+function renderQualityAnalysis() {
+  const q = store.qualityData;
+  const domains = [
+    { key: 'health', label: '健康', icon: '🏃', color: '#51CF66' },
+    { key: 'language', label: '语言', icon: '💬', color: '#748FFC' },
+    { key: 'society', label: '社会', icon: '🤝', color: '#FFA94D' },
+    { key: 'science', label: '科学', icon: '🔬', color: '#9775FA' },
+    { key: 'art', label: '艺术', icon: '🎨', color: '#FF6B6B' },
+  ];
+  const avgScore = Math.round(Object.values(q).reduce((s,d)=>s+d.score,0)/5);
+  const suggestions = [];
+  domains.forEach(d => {
+    const data = q[d.key];
+    if (data.score < 80) suggestions.push({ domain: d.label, icon: d.icon, suggestion: `增加${d.label}领域活动频次，关注幼儿个体差异` });
+    else if (data.score < 85) suggestions.push({ domain: d.label, icon: d.icon, suggestion: `${d.label}领域整体良好，可增加拓展活动` });
+    if (data.completed / data.total < 0.7) suggestions.push({ domain: d.label, icon: d.icon, suggestion: `${d.label}领域教学进度偏慢，需调整计划` });
+  });
+
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📊 教学质量分析</span></div>
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:36px;font-weight:700;color:var(--primary)">${avgScore}</div>
+      <div style="font-size:12px;color:var(--text-secondary)">五大领域综合平均分</div>
+    </div>`;
+  domains.forEach(d => {
+    const data = q[d.key];
+    const pct = Math.round((data.completed / data.total) * 100);
+    html += `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span>${d.icon} ${d.label}</span>
+        <span><b>${data.score}分</b> · ${data.completed}/${data.total} 项</span>
+      </div>
+      <div class="progress-bar" style="height:8px"><div class="progress-fill" style="width:${pct}%;background:${d.color}"></div></div>
+    </div>`;
+  });
+  html += `</div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:8px;font-size:14px">📈 幼儿发展数据看板</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+      ${domains.map(d => {
+        const data = q[d.key];
+        return `<div style="text-align:center;padding:8px;background:${d.color}10;border-radius:8px">
+          <div style="font-size:24px;font-weight:700;color:${d.color}">${data.score}</div>
+          <div style="font-size:11px;color:var(--text-secondary)">${d.label}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  if (suggestions.length > 0) {
+    html += `<div class="card">
+      <div class="card-title" style="margin-bottom:8px;font-size:14px">💡 教研改进建议</div>
+      ${suggestions.map(s => `
+        <div class="list-item">
+          <div class="li-icon" style="background:#FFF3E0;color:#E65100">${s.icon}</div>
+          <div class="li-info"><div class="li-title">${s.domain}领域</div><div class="li-sub">${s.suggestion}</div></div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function renderResearch() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">🔬 教研管理</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddResearchModal()">+ 新课题</button>
+    </div>
+    <div class="section-header" style="font-size:13px">📋 教研计划</div>`;
+  kf(store.researchRecords).forEach(r => {
+    html += `<div class="rich-card">
+      <div class="rc-header"><b>${r.title}</b><span class="tag ${r.status==='进行中'?'blue':'green'}">${r.status}</span></div>
+      <div class="rc-body">负责人：${r.leader} | 参与人数：${r.participants} | ${r.date}</div>
+      ${r.status === '已完成' ? `<div class="rc-actions"><button class="btn btn-outline btn-sm" onclick="viewResearchArchive(${r.id})">查看成果</button></div>` : ''}
+    </div>`;
+  });
+  html += `<div class="section-header" style="font-size:13px">👀 听评课记录</div>`;
+  kf(store.observationRecords).forEach(o => {
+    html += `<div class="rich-card">
+      <div class="rc-header"><b>${o.teacher} - ${o.subject}</b><span style="font-size:16px;font-weight:700;color:var(--primary)">${o.score}分</span></div>
+      <div class="rc-body">班级：${o.class} | 日期：${o.date}<br>评课人：${o.evaluator}<br>📝 评语：${o.comment}</div>
+    </div>`;
+  });
+  html += `<div style="text-align:center;margin-top:8px">
+    <button class="btn btn-outline btn-sm" onclick="showAddObservationModal()">+ 添加听评课记录</button>
+  </div></div>`;
+
+  // 教研成果归档
+  const archives = kf(store.researchRecords).filter(r => r.status === '已完成');
+  if (archives.length > 0) {
+    html += `<div class="card">
+      <div class="card-title" style="margin-bottom:8px;font-size:14px">📦 教研成果归档</div>`;
+    archives.forEach(a => {
+      html += `<div class="rich-card">
+        <div class="rc-header"><b>✅ ${a.title}</b></div>
+        <div class="rc-body">负责人：${a.leader} | 参与人数：${a.participants}<br>完成日期：${a.date}</div>
+      </div>`;
+    });
+    html += `<div style="font-size:12px;color:var(--text-secondary);text-align:center;margin-top:4px">
+      累计教研成果 <b>${archives.length}</b> 项
+    </div></div>`;
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function viewResearchArchive(id) {
+  const r = store.researchRecords.find(d => d.id === id);
+  if (!r) return;
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📦 教研成果</div>
+    <div class="rich-card">
+      <b>${r.title}</b>
+      <div style="margin-top:8px;font-size:13px;line-height:1.8">
+        负责人：${r.leader}<br>
+        参与人数：${r.participants}<br>
+        完成日期：${r.date}<br>
+        成果类型：园本教研成果<br>
+        状态：已归档
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:10px;font-size:13px;color:var(--text-secondary)">
+      教研成果已纳入园本教研资源库
+    </div>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function showAddObservationModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">👀 添加听评课记录</div>
+    <div class="form-group"><label class="form-label">授课教师</label><input class="form-input" id="obsTeacher"></div>
+    <div class="form-group"><label class="form-label">班级</label><input class="form-input" id="obsClass"></div>
+    <div class="form-group"><label class="form-label">科目</label><input class="form-input" id="obsSubject"></div>
+    <div class="form-group"><label class="form-label">评课人</label><input class="form-input" id="obsEvaluator" value="蒋园长"></div>
+    <div class="form-group"><label class="form-label">评分</label><input class="form-input" id="obsScore" type="number" min="0" max="100" value="85"></div>
+    <div class="form-group"><label class="form-label">评语</label><textarea class="form-input form-textarea" id="obsComment"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="addObservation()">添加记录</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addObservation() {
+  store.observationRecords.unshift({
+    id: Date.now(),
+    teacher: document.getElementById('obsTeacher').value || '未填写',
+    class: document.getElementById('obsClass').value || '未填写',
+    date: new Date().toISOString().split('T')[0],
+    subject: document.getElementById('obsSubject').value || '未填写',
+    evaluator: document.getElementById('obsEvaluator').value || '园长',
+    score: parseInt(document.getElementById('obsScore').value) || 80,
+    comment: document.getElementById('obsComment').value || '无',
+  });
+  saveStore(); closeModal(); toast('✅ 听评课记录已添加'); renderResearch();
+}
+
+function showAddResearchModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">🔬 添加教研课题</div>
+    <div class="form-group"><label class="form-label">课题名称</label><input class="form-input" id="resTitle"></div>
+    <div class="form-group"><label class="form-label">负责人</label><input class="form-input" id="resLeader"></div>
+    <div class="form-group"><label class="form-label">参与人数</label><input class="form-input" id="resParticipants" type="number" value="5"></div>
+    <button class="btn btn-primary btn-block" onclick="addResearch()">添加课题</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addResearch() {
+  store.researchRecords.unshift({
+    id: Date.now(), title: document.getElementById('resTitle').value || '新课题',
+    leader: document.getElementById('resLeader').value || '待定', date: new Date().toISOString().split('T')[0],
+    status: '进行中', participants: parseInt(document.getElementById('resParticipants').value) || 5,
+  });
+  saveStore(); closeModal(); toast('✅ 教研课题已添加'); renderResearch();
+}
+
+// ==================== 2. 教师与园务管理 ====================
+
+function renderTeacherArchive() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">👩‍🏫 教师档案库</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddTeacherModal()">+ 添加教师</button>
+    </div>`;
+  kf(store.teachers).forEach(t => {
+    html += `<div class="rich-card">
+      <div class="rc-header">
+        <b>${t.name}</b>
+        <span class="tag blue">${t.position}</span>
+      </div>
+      <div class="rc-body">
+        班级：${t.class} | 入职：${t.joinDate}<br>
+        证书：${t.certs.join('、')}<br>
+        培训：${t.trainings.slice(0,2).join('、')}${t.trainings.length>2?'...':''}<br>
+        ${t.awards.length ? '获奖：'+t.awards.join('、') : ''}
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showAddTeacherModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">👩‍🏫 添加教师</div>
+    <div class="form-group"><label class="form-label">姓名</label><input class="form-input" id="tName"></div>
+    <div class="form-group"><label class="form-label">班级</label><input class="form-input" id="tClass"></div>
+    <div class="form-group"><label class="form-label">职位</label>
+      <select class="form-input form-select" id="tPos"><option>班主任</option><option>配班教师</option><option>保育员</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">证书（逗号分隔）</label><input class="form-input" id="tCerts" placeholder="幼师资格证,普通话二甲"></div>
+    <div class="form-group"><label class="form-label">培训记录（逗号分隔）</label><input class="form-input" id="tTrainings"></div>
+    <div class="form-group"><label class="form-label">获奖记录（逗号分隔）</label><input class="form-input" id="tAwards"></div>
+    <button class="btn btn-primary btn-block" onclick="addTeacher()">添加教师</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addTeacher() {
+  store.teachers.push({
+    id: Date.now(), name: document.getElementById('tName').value || '新教师',
+    class: document.getElementById('tClass').value || '未分配', position: document.getElementById('tPos').value,
+    phone: '', certs: (document.getElementById('tCerts').value || '').split(',').filter(Boolean),
+    trainings: (document.getElementById('tTrainings').value || '').split(',').filter(Boolean),
+    awards: (document.getElementById('tAwards').value || '').split(',').filter(Boolean),
+    joinDate: new Date().toISOString().split('T')[0],
+  });
+  saveStore(); closeModal(); toast('✅ 教师已添加'); renderTeacherArchive();
+}
+
+function renderMeetingMgmt() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📅 会议管理</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddMeetingModal()">+ 新会议</button>
+    </div>`;
+  kf(store.meetings).forEach(m => {
+    html += `<div class="rich-card">
+      <div class="rc-header">
+        <b>${m.title}</b>
+        <span class="tag ${m.status==='已完成'?'green':'blue'}">${m.status}</span>
+      </div>
+      <div class="rc-body">
+        📅 ${m.date} ${m.time} | 📍 ${m.location}<br>
+        👥 ${m.attendees}
+        ${m.minutes ? `<br>📝 ${m.minutes.substring(0,50)}...` : ''}
+      </div>
+      <div class="rc-actions">
+        ${m.status === '待召开' ? `<button class="btn btn-primary btn-sm" onclick="completeMeeting(${m.id})">召开会议</button>` : ''}
+        <button class="btn btn-outline btn-sm" onclick="viewMeetingTasks(${m.id})">查看任务</button>
+      </div>
+    </div>`;
+  });
+  html += `</div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:8px;font-size:14px">📋 待办任务追踪</div>`;
+  kf(store.meetingTasks).forEach(t => {
+    html += `<div class="list-item">
+      <div class="li-icon" style="background:${t.status==='已完成'?'#F0FFF4':'#FFF9F0'};color:${t.status==='已完成'?'var(--accent3)':'var(--accent)'}">${t.status==='已完成'?'✅':'⏳'}</div>
+      <div class="li-info">
+        <div class="li-title">${t.task}</div>
+        <div class="li-sub">${t.assignee} · 截止 ${t.deadline}</div>
+      </div>
+      ${t.status === '未完成' ? `<button class="btn btn-primary btn-sm" onclick="completeTask(${t.id})">完成</button>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showAddMeetingModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📅 安排会议</div>
+    <div class="form-group"><label class="form-label">会议标题</label><input class="form-input" id="mtTitle"></div>
+    <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="mtDate"></div>
+    <div class="form-group"><label class="form-label">时间</label><input class="form-input" id="mtTime" placeholder="14:00"></div>
+    <div class="form-group"><label class="form-label">地点</label><input class="form-input" id="mtLoc" value="会议室"></div>
+    <div class="form-group"><label class="form-label">参会人员</label><input class="form-input" id="mtAtt" value="全体教师"></div>
+    <div class="form-group"><label class="form-label">会议纪要</label><textarea class="form-input form-textarea" id="mtMin"></textarea></div>
+    <div class="form-group"><label class="form-label">待办任务（每行一个：任务名,负责人,截止日期）</label><textarea class="form-input form-textarea" id="mtTasks" placeholder="完成教学计划,王老师,2026-08-10&#10;收集教材需求,李老师,2026-08-08"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="addMeeting()">创建会议</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addMeeting() {
+  const meetingId = Date.now();
+  store.meetings.unshift({
+    id: meetingId, title: document.getElementById('mtTitle').value || '新会议',
+    date: document.getElementById('mtDate').value || new Date().toISOString().split('T')[0],
+    time: document.getElementById('mtTime').value || '14:00',
+    location: document.getElementById('mtLoc').value, attendees: document.getElementById('mtAtt').value,
+    status: '待召开', minutes: document.getElementById('mtMin').value,
+  });
+  const tasksText = document.getElementById('mtTasks').value;
+  if (tasksText.trim()) {
+    tasksText.split('\n').forEach(line => {
+      const parts = line.split(',');
+      if (parts.length >= 2) {
+        store.meetingTasks.push({
+          id: Date.now() + Math.random(), meetingId, task: parts[0].trim(),
+          assignee: parts[1]?.trim() || '待分配', deadline: parts[2]?.trim() || '待定', status: '未完成',
+        });
+      }
+    });
+  }
+  saveStore(); closeModal(); toast('✅ 会议已创建'); renderMeetingMgmt();
+}
+
+function completeMeeting(id) {
+  const m = store.meetings.find(me => me.id === id);
+  if (m) { m.status = '已完成'; saveStore(); toast('✅ 会议已标记完成'); renderMeetingMgmt(); }
+}
+
+function viewMeetingTasks(mid) {
+  const tasks = store.meetingTasks.filter(t => t.meetingId === mid);
+  const m = store.meetings.find(me => me.id === mid);
+  let html = `<div class="modal-title">📋 ${m?.title || ''} · 任务列表</div>`;
+  tasks.forEach(t => {
+    html += `<div class="check-list-item">
+      <div class="checkbox ${t.status==='已完成'?'checked':''}" onclick="toggleMeetingTask(${t.id})">✓</div>
+      <div style="flex:1"><b>${t.task}</b><br><small style="color:var(--text-secondary)">${t.assignee} · ${t.deadline}</small></div>
+      <span class="tag ${t.status==='已完成'?'green':'orange'}">${t.status}</span>
+    </div>`;
+  });
+  html += tasks.length === 0 ? '<div class="empty"><div class="empty-text">暂无任务</div></div>' : '';
+  document.getElementById('modalBox').innerHTML = html;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function toggleMeetingTask(id) {
+  const t = store.meetingTasks.find(tk => tk.id === id);
+  if (t) { t.status = t.status === '已完成' ? '未完成' : '已完成'; saveStore(); }
+  // re-render
+  const mid = t.meetingId;
+  viewMeetingTasks(mid);
+}
+
+function completeTask(id) {
+  const t = store.meetingTasks.find(tk => tk.id === id);
+  if (t) { t.status = '已完成'; saveStore(); toast('✅ 任务已完成'); renderMeetingMgmt(); }
+}
+
+// ==================== 4. 家园共育与沟通 ====================
+
+function renderNoticeMgmt() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📢 通知公告管理</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddNoticeModal()">+ 发布通知</button>
+    </div>
+    <div class="section-header" style="font-size:13px">📋 通知模板库</div>
+    <div class="quick-actions">
+      <div class="quick-action" onclick="useTemplate('放假通知')"><span class="qa-icon" style="background:#FFF5F5;color:var(--primary)">📅</span>放假通知</div>
+      <div class="quick-action" onclick="useTemplate('活动邀请')"><span class="qa-icon" style="background:#EDF2FF;color:var(--accent2)">🎉</span>活动邀请</div>
+      <div class="quick-action" onclick="useTemplate('安全提醒')"><span class="qa-icon" style="background:#FFF9F0;color:var(--accent)">⚠️</span>安全提醒</div>
+      <div class="quick-action" onclick="useTemplate('食谱公示')"><span class="qa-icon" style="background:#F0FFF4;color:var(--accent3)">🍽️</span>食谱公示</div>
+    </div>`;
+  kf(store.notices).forEach(n => {
+    const readRate = Math.round((n.readCount / n.totalCount) * 100);
+    html += `<div class="rich-card">
+      <div class="rc-header">
+        <b>${n.title}</b>
+        <span class="tag ${n.type==='重要通知'?'red':'blue'}">${n.type}</span>
+      </div>
+      <div class="rc-body">${n.content.substring(0,80)}...</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;color:var(--text-secondary)">
+        <span>📤 ${n.sender} · ${n.date}</span>
+        <span>👁️ 已读 ${n.readCount}/${n.totalCount} (${readRate}%)</span>
+      </div>
+      <div class="progress-bar" style="margin-top:4px"><div class="progress-fill" style="width:${readRate}%;background:${readRate>70?'var(--accent3)':'var(--accent)'}"></div></div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showAddNoticeModal(template) {
+  const templates = {
+    '放假通知': { title:'关于放假安排的通知', content:'各位家长：\n\n我园定于____月____日开始放____假，____月____日正式返园。\n\n放假期间请家长注意孩子的安全，祝假期愉快！\n\n星星幼儿园\n____年____月____日' },
+    '活动邀请': { title:'活动邀请函', content:'亲爱的家长朋友：\n\n我园将于____月____日举行________活动，诚邀您的参与！\n\n活动时间：____\n活动地点：____\n\n期待您的到来！' },
+    '安全提醒': { title:'安全温馨提示', content:'各位家长：\n\n近期天气____，请各位家长注意以下事项：\n1. ____\n2. ____\n3. ____\n\n请家长朋友们相互转告，共同守护孩子安全！' },
+    '食谱公示': { title:'本周食谱公示', content:'各位家长：\n\n以下为本周（____月____日-____月____日）幼儿食谱：\n\n周一：____\n周二：____\n周三：____\n周四：____\n周五：____\n\n如有过敏食物请提前告知班级老师。' },
+  };
+  const tmpl = templates[template] || { title: '', content: '' };
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📢 发布通知</div>
+    <div class="form-group"><label class="form-label">标题</label><input class="form-input" id="notTitle" value="${tmpl.title}"></div>
+    <div class="form-group"><label class="form-label">内容</label><textarea class="form-input form-textarea" id="notContent">${tmpl.content}</textarea></div>
+    <div class="form-group"><label class="form-label">类型</label>
+      <select class="form-input form-select" id="notType"><option>重要通知</option><option>日常</option><option>活动</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">接收人数</label><input class="form-input" id="notTotal" type="number" value="60"></div>
+    <button class="btn btn-primary btn-block" onclick="addNotice()">一键发布</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function useTemplate(t) { showAddNoticeModal(t); }
+
+function addNotice() {
+  store.notices.unshift({
+    id: Date.now(), title: document.getElementById('notTitle').value,
+    content: document.getElementById('notContent').value, date: new Date().toISOString().split('T')[0],
+    sender: '蒋园长', readCount: 0, totalCount: parseInt(document.getElementById('notTotal').value) || 60,
+    type: document.getElementById('notType').value,
+  });
+  saveStore(); closeModal(); toast('📢 通知已发布'); renderNoticeMgmt();
+}
+
+function renderParentMeeting() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">👨‍👩‍👧 家长会管理</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddParentMeetingModal()">+ 计划会议</button>
+    </div>`;
+  kf(store.parentMeetings).forEach(m => {
+    html += `<div class="rich-card">
+      <div class="rc-header"><b>${m.title}</b><span class="tag ${m.attendees>0?'blue':'orange'}">${m.status}</span></div>
+      <div class="rc-body">
+        📅 ${m.date} ${m.time} | 📍 ${m.location}<br>
+        👥 参会：${m.attendees}/${m.total}人
+        ${m.materials.length ? `<br>📦 材料：${m.materials.join('、')}` : ''}
+      </div>
+      <div class="rc-actions">
+        <button class="btn btn-outline btn-sm" onclick="generateMeetingMaterials(${m.id})">生成材料</button>
+        <button class="btn btn-primary btn-sm" onclick="collectFeedback(${m.id})">收集反馈</button>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showAddParentMeetingModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📅 计划家长会</div>
+    <div class="form-group"><label class="form-label">会议标题</label><input class="form-input" id="pmTitle"></div>
+    <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="pmDate"></div>
+    <div class="form-group"><label class="form-label">时间</label><input class="form-input" id="pmTime" value="18:00"></div>
+    <div class="form-group"><label class="form-label">地点</label><input class="form-input" id="pmLoc"></div>
+    <button class="btn btn-primary btn-block" onclick="addParentMeeting()">创建计划</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addParentMeeting() {
+  store.parentMeetings.push({
+    id: Date.now(), title: document.getElementById('pmTitle').value || '家长会',
+    date: document.getElementById('pmDate').value || new Date().toISOString().split('T')[0],
+    time: document.getElementById('pmTime').value || '18:00',
+    location: document.getElementById('pmLoc').value || '多功能厅',
+    attendees: 0, total: 60, status: '计划中', materials: [],
+  });
+  saveStore(); closeModal(); toast('✅ 会议计划已创建'); renderParentMeeting();
+}
+
+function generateMeetingMaterials(id) {
+  const m = store.parentMeetings.find(pm => pm.id === id);
+  if (!m) return;
+  m.materials = ['PPT演示文稿', '发言稿', '幼儿发展报告汇总'];
+  saveStore();
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📦 材料生成</div>
+    <div class="rich-card">
+      <b>${m.title}</b>
+      <div style="margin-top:8px;font-size:13px;line-height:2">
+        ✅ PPT演示文稿 — 已自动生成（含园所介绍、教学成果、活动照片）<br>
+        ✅ 发言稿 — 已自动生成（含开场、教学汇报、家园配合建议）<br>
+        ✅ 幼儿发展报告汇总 — 已汇总各班级发展数据
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="closeModal();toast('📦 材料已生成')">确认</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function collectFeedback(id) {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📋 会后反馈收集</div>
+    <div class="form-group"><label class="form-label">参会人数</label><input class="form-input" id="fbAtt" type="number" value="25"></div>
+    <div class="form-group"><label class="form-label">满意度（1-5分）</label><input class="form-input" id="fbScore" type="number" min="1" max="5" value="4"></div>
+    <div class="form-group"><label class="form-label">主要反馈</label><textarea class="form-input form-textarea" id="fbContent"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="saveFeedback(${id})">保存反馈</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function saveFeedback(id) {
+  const m = store.parentMeetings.find(pm => pm.id === id);
+  if (m) {
+    m.attendees = parseInt(document.getElementById('fbAtt').value) || m.attendees;
+    m.status = '已召开';
+  }
+  saveStore(); closeModal(); toast('✅ 反馈已保存'); renderParentMeeting();
+}
+
+function renderEventMgmt() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">🎉 活动管理</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddEventModal()">+ 创建活动</button>
+    </div>`;
+  kf(store.events).forEach(e => {
+    html += `<div class="rich-card">
+      <div class="rc-header"><b>${e.title}</b><span class="tag blue">${e.type}</span></div>
+      <div class="rc-body">
+        📅 ${e.date} | 👥 报名：${e.signups}/${e.capacity}人
+        <div class="progress-bar" style="margin-top:4px"><div class="progress-fill" style="width:${Math.round(e.signups/e.capacity*100)}%;background:var(--accent2)"></div></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${e.description}</div>
+      <div class="rc-actions">
+        <button class="btn btn-outline btn-sm" onclick="viewEventSummary(${e.id})">活动总结</button>
+        <button class="btn btn-primary btn-sm" onclick="updateEventSignup(${e.id})">更新报名</button>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showAddEventModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">🎉 创建活动</div>
+    <div class="form-group"><label class="form-label">活动名称</label><input class="form-input" id="evTitle"></div>
+    <div class="form-group"><label class="form-label">类型</label>
+      <select class="form-input form-select" id="evType"><option>亲子活动</option><option>开放日</option><option>节日庆典</option><option>社会实践活动</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="evDate"></div>
+    <div class="form-group"><label class="form-label">人数上限</label><input class="form-input" id="evCap" type="number" value="60"></div>
+    <div class="form-group"><label class="form-label">活动描述</label><textarea class="form-input form-textarea" id="evDesc"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="addEvent()">创建活动</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addEvent() {
+  store.events.push({
+    id: Date.now(), title: document.getElementById('evTitle').value || '新活动',
+    date: document.getElementById('evDate').value || new Date().toISOString().split('T')[0],
+    type: document.getElementById('evType').value, signups: 0,
+    capacity: parseInt(document.getElementById('evCap').value) || 60,
+    description: document.getElementById('evDesc').value, status: '报名中',
+  });
+  saveStore(); closeModal(); toast('✅ 活动已创建'); renderEventMgmt();
+}
+
+function viewEventSummary(id) {
+  const e = store.events.find(ev => ev.id === id);
+  if (!e) return;
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📊 ${e.title} · 活动总结</div>
+    <div class="rich-card">
+      <div style="font-size:13px;line-height:1.8">
+        📅 日期：${e.date}<br>
+        👥 参与人数：${e.signups}/${e.capacity}<br>
+        📈 参与率：${Math.round(e.signups/e.capacity*100)}%<br>
+        📝 ${e.description}
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-secondary);padding:10px;text-align:center">
+      活动方案已归档，经验可积累复用 ✅
+    </div>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function updateEventSignup(id) {
+  const e = store.events.find(ev => ev.id === id);
+  if (!e) return;
+  e.signups = Math.min(e.signups + 1, e.capacity);
+  saveStore(); toast('✅ 报名+1'); renderEventMgmt();
+}
+
+function renderCommRecords() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📞 家园沟通记录</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddCommModal()">+ 添加记录</button>
+    </div>`;
+  kf(store.communicationRecords).forEach(r => {
+    html += `<div class="rich-card" style="${r.needFollowUp ? 'border-left:3px solid var(--accent)' : ''}">
+      <div class="rc-header">
+        <b>${r.childName} · ${r.type}</b>
+        ${r.needFollowUp ? '<span class="tag orange">⚠️ 需跟进</span>' : '<span class="tag green">已完成</span>'}
+      </div>
+      <div class="rc-body">
+        家长：${r.parentName} | ${r.date}<br>
+        主题：${r.topic}<br>
+        结果：${r.result}
+        ${r.needFollowUp ? `<br><span style="color:var(--accent)">跟进：${r.followNote}</span>` : ''}
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showAddCommModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📞 添加沟通记录</div>
+    <div class="form-group"><label class="form-label">幼儿姓名</label><input class="form-input" id="cmChild"></div>
+    <div class="form-group"><label class="form-label">家长</label><input class="form-input" id="cmParent"></div>
+    <div class="form-group"><label class="form-label">沟通类型</label>
+      <select class="form-input form-select" id="cmType"><option>约谈</option><option>家访</option><option>电话沟通</option><option>微信沟通</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">主题</label><input class="form-input" id="cmTopic"></div>
+    <div class="form-group"><label class="form-label">结果</label><input class="form-input" id="cmResult"></div>
+    <div class="form-group"><label class="form-label">需跟进</label>
+      <select class="form-input form-select" id="cmFollow"><option value="0">否</option><option value="1">是</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">跟进备注</label><input class="form-input" id="cmFollowNote"></div>
+    <button class="btn btn-primary btn-block" onclick="addCommRecord()">保存记录</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addCommRecord() {
+  store.communicationRecords.unshift({
+    id: Date.now(), childName: document.getElementById('cmChild').value || '未指定',
+    parentName: document.getElementById('cmParent').value || '未指定',
+    type: document.getElementById('cmType').value,
+    date: new Date().toISOString().split('T')[0],
+    topic: document.getElementById('cmTopic').value,
+    result: document.getElementById('cmResult').value,
+    needFollowUp: document.getElementById('cmFollow').value === '1',
+    followNote: document.getElementById('cmFollowNote').value,
+  });
+  saveStore(); closeModal(); toast('✅ 记录已保存'); renderCommRecords();
+}
+
+function renderSatisfaction() {
+  const s = kf(store.surveys)[0];
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📊 家长满意度</span>
+      <button class="btn btn-primary btn-sm" onclick="sendSurvey()">发放问卷</button>
+    </div>`;
+  if (s) {
+    html += `<div style="text-align:center;padding:12px 0">
+      <div style="font-size:42px;font-weight:700;color:var(--primary)">${s.overallScore}</div>
+      <div style="font-size:12px;color:var(--text-secondary)">综合满意度评分 / 5分</div>
+      <div style="font-size:12px;color:var(--text-light);margin-top:4px">${s.title} · ${s.responses}/${s.total} 人参与</div>
+    </div>`;
+    const aspects = [
+      { key:'teaching', label:'教学质量', icon:'📚' },
+      { key:'care', label:'保育照护', icon:'💕' },
+      { key:'food', label:'膳食营养', icon:'🍽️' },
+      { key:'safety', label:'安全管理', icon:'🛡️' },
+      { key:'communication', label:'家园沟通', icon:'💬' },
+    ];
+    aspects.forEach(a => {
+      const score = s.aspects[a.key];
+      html += `<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;font-size:13px">
+        <span>${a.icon} ${a.label}</span>
+        <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${score*20}%;background:var(--accent2)"></div></div>
+        <span style="font-weight:600">${score}</span>
+      </div>`;
+    });
+  }
+  html += `</div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:8px;font-size:14px">📝 投诉建议处理</div>`;
+  kf(store.complaints).forEach(c => {
+    html += `<div class="rich-card">
+      <div class="rc-header"><b>${c.from}</b><span class="tag ${c.status==='已回复'?'green':'orange'}">${c.status}</span></div>
+      <div class="rc-body">${c.content}</div>
+      ${c.reply ? `<div style="font-size:12px;color:var(--accent3);margin-top:4px">✅ 回复：${c.reply}</div>` : ''}
+    </div>`;
+  });
+  html += `<button class="btn btn-outline btn-block btn-sm" onclick="showAddComplaintModal()">+ 记录投诉建议</button></div>`;
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function sendSurvey() {
+  store.surveys[0].responses = Math.min(store.surveys[0].responses + 5, store.surveys[0].total);
+  saveStore(); toast('📊 问卷已发放'); renderSatisfaction();
+}
+
+function showAddComplaintModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📝 记录投诉建议</div>
+    <div class="form-group"><label class="form-label">来源</label><input class="form-input" id="cpFrom"></div>
+    <div class="form-group"><label class="form-label">内容</label><textarea class="form-input form-textarea" id="cpContent"></textarea></div>
+    <div class="form-group"><label class="form-label">处理状态</label>
+      <select class="form-input form-select" id="cpStatus"><option>待处理</option><option>已回复</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">回复内容</label><textarea class="form-input form-textarea" id="cpReply"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="addComplaint()">保存</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addComplaint() {
+  store.complaints.push({
+    id: Date.now(), from: document.getElementById('cpFrom').value || '家长',
+    date: new Date().toISOString().split('T')[0],
+    content: document.getElementById('cpContent').value,
+    status: document.getElementById('cpStatus').value,
+    reply: document.getElementById('cpReply').value,
+    handler: '蒋园长',
+  });
+  saveStore(); closeModal(); toast('✅ 已记录'); renderSatisfaction();
+}
+
+// ==================== 5. 招生与品牌宣传 ====================
+
+function renderEnrollmentActivity() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">🚀 招生活动管理</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddEnrollmentModal()">+ 策划活动</button>
+    </div>`;
+  kf(store.enrollmentActivities).forEach(e => {
+    html += `<div class="rich-card">
+      <div class="rc-header"><b>${e.title}</b><span class="tag ${e.status==='已完成'?'green':'blue'}">${e.status}</span></div>
+      <div class="rc-body">
+        线索：${e.leads}个 | 转化：${e.converted}人 | 预算：${e.budget}
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-secondary)">
+        📋 SOP：${e.sop.join(' → ')}
+      </div>
+      <div class="rc-actions">
+        <button class="btn btn-outline btn-sm" onclick="viewEnrollmentSummary(${e.id})">效果复盘</button>
+        <button class="btn btn-primary btn-sm" onclick="addEnrollmentLead(${e.id})">+ 线索</button>
+      </div>
+    </div>`;
+  });
+  html += `</div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:8px;font-size:14px">📋 线索管理</div>`;
+  kf(store.enrollmentLeads).forEach(l => {
+    html += `<div class="rich-card">
+      <div class="rc-header"><b>${l.parentName}</b><span class="tag ${l.status==='跟进中'?'blue':l.status==='已报名'?'green':'orange'}">${l.status}</span></div>
+      <div class="rc-body">来源：${l.source} | ${l.date}<br>${l.note}</div>
+    </div>`;
+  });
+  html += `<button class="btn btn-outline btn-block btn-sm" onclick="showAddLeadModal()">+ 添加线索</button></div>`;
+
+  html += `<div class="card">
+    <div class="card-title" style="margin-bottom:8px;font-size:14px">🔍 竞品分析</div>
+    <div class="rich-card">
+      <b>周边园所对比</b>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;line-height:1.8">
+        🏫 A幼儿园：双语特色，月费2500元，距离1.5km<br>
+        🏫 B幼儿园：蒙台梭利，月费3200元，距离0.8km<br>
+        🏫 C幼儿园：普惠性，月费1200元，距离2km<br>
+        ⭐ 我园优势：师资稳定、课程体系完善、户外场地大
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showAddEnrollmentModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">🚀 策划招生活动</div>
+    <div class="form-group"><label class="form-label">活动名称</label><input class="form-input" id="enTitle"></div>
+    <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="enDate"></div>
+    <div class="form-group"><label class="form-label">预算</label><input class="form-input" id="enBudget" placeholder="如：3000元"></div>
+    <div class="form-group"><label class="form-label">SOP流程（逗号分隔）</label><textarea class="form-input form-textarea" id="enSop" placeholder="场地布置,宣传物料,体验课,家长答疑,参观引导"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="addEnrollment()">创建活动</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addEnrollment() {
+  store.enrollmentActivities.unshift({
+    id: Date.now(), title: document.getElementById('enTitle').value || '招生活动',
+    date: document.getElementById('enDate').value || new Date().toISOString().split('T')[0],
+    status: '筹备中', leads: 0, converted: 0, budget: document.getElementById('enBudget').value || '待定',
+    sop: (document.getElementById('enSop').value || '场地,物料,体验,答疑,引导').split(',').map(s=>s.trim()),
+  });
+  saveStore(); closeModal(); toast('✅ 招生活动已创建'); renderEnrollmentActivity();
+}
+
+function addEnrollmentLead(id) {
+  const e = store.enrollmentActivities.find(ea => ea.id === id);
+  if (e) { e.leads++; e.converted = Math.floor(e.leads * 0.25); saveStore(); toast('✅ 线索+1'); renderEnrollmentActivity(); }
+}
+
+function viewEnrollmentSummary(id) {
+  const e = store.enrollmentActivities.find(ea => ea.id === id);
+  if (!e) return;
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📊 ${e.title} · 效果复盘</div>
+    <div class="rich-card">
+      <div style="font-size:13px;line-height:1.8">
+        📅 日期：${e.date}<br>
+        👋 获得线索：${e.leads} 个<br>
+        ✅ 成功转化：${e.converted} 人<br>
+        📈 转化率：${e.leads>0?Math.round(e.converted/e.leads*100):0}%<br>
+        💰 预算投入：${e.budget}<br>
+        📋 执行流程：${e.sop.join(' → ')}
+      </div>
+    </div>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function showAddLeadModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">👋 添加招生线索</div>
+    <div class="form-group"><label class="form-label">家长姓名</label><input class="form-input" id="ldParent"></div>
+    <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="ldPhone"></div>
+    <div class="form-group"><label class="form-label">来源</label>
+      <select class="form-input form-select" id="ldSource"><option>社区活动</option><option>朋友推荐</option><option>线上咨询</option><option>开放日</option><option>其他</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="ldNote"></div>
+    <button class="btn btn-primary btn-block" onclick="addLead()">添加线索</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addLead() {
+  store.enrollmentLeads.push({
+    id: Date.now(), childName: '待定', parentName: document.getElementById('ldParent').value || '新线索',
+    phone: document.getElementById('ldPhone').value || '待记录',
+    source: document.getElementById('ldSource').value, date: new Date().toISOString().split('T')[0],
+    status: '待联系', note: document.getElementById('ldNote').value,
+  });
+  saveStore(); closeModal(); toast('✅ 线索已添加'); renderEnrollmentActivity();
+}
+
+function renderPromoContent() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📱 宣传内容创作</span>
+      <button class="btn btn-primary btn-sm" onclick="showCreateContentModal()">+ 创作内容</button>
+    </div>
+    <div class="quick-actions">
+      <div class="quick-action" onclick="quickCreate('公众号文章')"><span class="qa-icon" style="background:#EDF2FF;color:var(--accent2)">📰</span>公众号文章</div>
+      <div class="quick-action" onclick="quickCreate('朋友圈文案')"><span class="qa-icon" style="background:#F0FFF4;color:var(--accent3)">💬</span>朋友圈文案</div>
+      <div class="quick-action" onclick="quickCreate('宣传海报文案')"><span class="qa-icon" style="background:#FFF5F5;color:var(--primary)">🎨</span>宣传海报</div>
+      <div class="quick-action" onclick="quickCreate('园所故事')"><span class="qa-icon" style="background:#F8F0FF;color:var(--accent4)">📖</span>园所故事</div>
+    </div>`;
+  kf(store.promoContents).forEach(c => {
+    html += `<div class="rich-card">
+      <div class="rc-header"><b>${c.title}</b><span class="tag blue">${c.type}</span></div>
+      <div class="rc-body">📅 ${c.date} | 📍 ${c.channel} | 👁️ ${c.views} 次浏览</div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showCreateContentModal(type) {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">✍️ 创作${type||'宣传内容'}</div>
+    <div class="form-group"><label class="form-label">类型</label>
+      <select class="form-input form-select" id="pcType"><option>公众号文章</option><option>朋友圈文案</option><option>宣传海报文案</option><option>园所故事</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">标题</label><input class="form-input" id="pcTitle"></div>
+    <div class="form-group"><label class="form-label">发布渠道</label><input class="form-input" id="pcChannel" value="微信公众号"></div>
+    <button class="btn btn-primary btn-block" onclick="createContent()">生成内容</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function quickCreate(type) { showCreateContentModal(type); }
+
+function createContent() {
+  const type = document.getElementById('pcType').value;
+  const title = document.getElementById('pcTitle').value || '未命名内容';
+  const channel = document.getElementById('pcChannel').value;
+  const templates = {
+    '公众号文章': `【${title}】\n\n亲爱的家长朋友们：\n\n${title}是孩子成长中的重要一环...\n\n让我们一起关注孩子的成长！\n\n——星星幼儿园` ,
+    '朋友圈文案': `🌟 ${title}\n\n用爱与专业守护每一个孩子的童年✨\n\n#星星幼儿园 #用心教育` ,
+    '宣传海报文案': `🎉 ${title}\n\n优质教育 · 用心陪伴\n让孩子在快乐中成长！\n\n📞 咨询热线：XXX-XXXXXXX\n🏫 星星幼儿园` ,
+    '园所故事': `【${title}】\n\n在星星幼儿园的每一天，都有温暖的故事发生...\n\n今天想和大家分享一个小故事：\n\n...\n\n这就是我们——用爱陪伴，用心教育。` ,
+  };
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">✅ 内容已生成</div>
+    <div class="rich-card">
+      <div style="font-size:13px;line-height:1.8;white-space:pre-line">${templates[type] || templates['公众号文章']}</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary btn-block" onclick="saveAndCopyContent('${type.replace(/'/g, "\\'")}', '${title.replace(/'/g, "\\'")}', '${channel.replace(/'/g, "\\'")}')">📋 复制并保存</button>
+      <button class="btn btn-outline btn-block" onclick="closeModal()">关闭</button>
+    </div>
+  `;
+}
+
+function saveAndCopyContent(type, title, channel) {
+  store.promoContents.unshift({
+    id: Date.now(), type, title, date: new Date().toISOString().split('T')[0], channel, views: 0,
+  });
+  saveStore();
+  const text = document.querySelector('#modalBox .rich-card')?.innerText || '';
+  navigator.clipboard?.writeText(text).then(() => toast('📋 已复制并保存'));
+  closeModal();
+}
+
+function renderClassPromo() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📸 班级宣传完成情况</span></div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:#F0FFF4;color:var(--accent3)">✅</div><div><div class="stat-num">${kf(store.classPromotions).filter(p=>p.posted).length}</div><div class="stat-label">已发布</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FFF5F5;color:var(--primary)">⏳</div><div><div class="stat-num">${kf(store.classPromotions).filter(p=>!p.posted).length}</div><div class="stat-label">待发布</div></div></div>
+    </div>`;
+  kf(store.classPromotions).forEach(p => {
+    html += `<div class="rich-card" style="${!p.posted ? 'border-left:3px solid var(--accent)' : ''}">
+      <div class="rc-header">
+        <b>${p.class}</b>
+        <span class="tag ${p.posted?'green':'orange'}">${p.posted?'已发布':'待发布'}</span>
+      </div>
+      <div class="rc-body">
+        ${p.content} | 照片：${p.photos}张
+        ${p.posted ? `<br>📤 ${p.postedDate} · ${p.platform}` : ''}
+      </div>
+      ${!p.posted ? `<div class="rc-actions"><button class="btn btn-primary btn-sm" onclick="publishClassPromo(${p.id})">标记发布</button></div>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function publishClassPromo(id) {
+  const p = store.classPromotions.find(cp => cp.id === id);
+  if (p) {
+    p.posted = true; p.postedDate = new Date().toISOString().split('T')[0]; p.platform = '家长群';
+    saveStore(); toast('📸 已标记发布'); renderClassPromo();
+  }
+}
+
+// ==================== 6. 研学基地管理 ====================
+
+function renderStudyTourPlans() {
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">🎒 研学方案</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddStudyPlanModal()">+ 新建方案</button>
+    </div>`;
+  const plans = kf(store.studyTourPlans);
+  if (!plans.length) {
+    html += '<div class="empty"><div class="empty-text">暂无研学方案，点击"+ 新建方案"创建</div></div>';
+  } else {
+    plans.forEach(p => {
+      const statusColor = { '已完成': 'green', '筹备中': 'blue', '进行中': 'orange' };
+      html += `<div class="rich-card">
+        <div class="rc-header">
+          <b>${p.title}</b>
+          <span class="tag ${statusColor[p.status] || 'blue'}">${p.status}</span>
+        </div>
+        <div class="rc-body">
+          👶 ${p.target} | 📍 ${p.location} | 📅 ${p.date}<br>
+          👥 参与人数：${p.participants}人 | 💰 预算：${p.budget}
+        </div>
+        ${p.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${p.description.substring(0,60)}...</div>` : ''}
+        ${p.highlights ? `<div style="margin-top:4px">${p.highlights.map(h => `<span class="tag orange" style="margin:2px">${h}</span>`).join('')}</div>` : ''}
+        ${p.attFileName ? `<div style="margin-top:6px;padding:6px 10px;background:#F0F4FF;border-radius:6px;font-size:12px;display:flex;align-items:center;justify-content:space-between">
+          <span>📎 ${p.attFileName}${p.attFileSize ? ' (' + formatFileSize(p.attFileSize) + ')' : ''}</span>
+          <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;color:var(--accent2)" onclick="event.stopPropagation();viewStudyAttachedFile('${p.attFileName}','${(p.attFileData||'').substring(0,50)}...')">查看</button>
+        </div>` : ''}
+        <div class="rc-actions" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="viewStudyPlanDetail(${p.id})">📋 查看详情</button>
+          <label class="btn btn-outline btn-sm" style="color:var(--accent2);cursor:pointer;margin:0">
+            📤 上传文档或图片
+            <input type="file" accept="image/*,.pdf,.doc,.docx" style="display:none" onchange="handleStudyPlanFile(this,${p.id})">
+          </label>
+        </div>
+      </div>`;
+    });
+  }
+  html += `</div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:8px;font-size:14px">📊 研学统计</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:#F0FFF4;color:var(--accent3)">✅</div><div><div class="stat-num">${kf(store.studyTourPlans).filter(p=>p.status==='已完成').length}</div><div class="stat-label">已完成</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#EDF2FF;color:var(--accent2)">📋</div><div><div class="stat-num">${kf(store.studyTourPlans).filter(p=>p.status!=='已完成').length}</div><div class="stat-label">进行中/筹备中</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FFF9F0;color:var(--accent)">👶</div><div><div class="stat-num">${kf(store.studyTourPlans).reduce((s,p)=>s+p.participants,0)}</div><div class="stat-label">累计参与人次</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#F8F0FF;color:var(--accent4)">💰</div><div><div class="stat-num">${kf(store.studyTourPlans).filter(p=>p.status==='已完成').length}</div><div class="stat-label">已结算项目</div></div>
+    </div>
+  </div>`;
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showAddStudyPlanModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">🎒 新建研学方案</div>
+    <div class="form-group"><label class="form-label">方案标题</label><input class="form-input" id="spTitle" placeholder="如：春季农耕体验研学"></div>
+    <div class="form-group"><label class="form-label">目标年龄段</label>
+      <select class="form-input form-select" id="spTarget"><option>大班级组</option><option>中班级组</option><option>小班级组</option><option>全园</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">研学地点</label><input class="form-input" id="spLocation" placeholder="如：阳光农场"></div>
+    <div class="form-group"><label class="form-label">计划日期</label><input class="form-input" type="date" id="spDate"></div>
+    <div class="form-group"><label class="form-label">参与人数</label><input class="form-input" id="spParticipants" type="number" value="40"></div>
+    <div class="form-group"><label class="form-label">预算</label><input class="form-input" id="spBudget" placeholder="如：5000元"></div>
+    <div class="form-group"><label class="form-label">活动描述</label><textarea class="form-input form-textarea" id="spDesc" placeholder="简述活动目标与内容..."></textarea></div>
+    <div class="form-group"><label class="form-label">亮点环节（逗号分隔）</label><input class="form-input" id="spHighlights" placeholder="如：采摘体验,手工制作,户外观察"></div>
+    <div class="form-group">
+      <label class="form-label">📎 上传方案文档或图片</label>
+      <input type="file" accept="image/*,.pdf,.doc,.docx" id="spFileInput" onchange="previewNewPlanFile()" style="display:block;margin-top:6px;font-size:13px">
+      <div id="spFilePreview" style="margin-top:6px;font-size:12px;color:var(--text-secondary)"></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="addStudyPlan()">创建方案</button>
+  `;
+  window._spFileData = null; window._spFileName = ''; window._spFileSize = 0;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addStudyPlan() {
+  store.studyTourPlans.unshift({
+    id: Date.now(), title: document.getElementById('spTitle').value || '新研学方案',
+    target: document.getElementById('spTarget').value,
+    date: document.getElementById('spDate').value || new Date().toISOString().split('T')[0],
+    location: document.getElementById('spLocation').value || '待定',
+    participants: parseInt(document.getElementById('spParticipants').value) || 40,
+    budget: document.getElementById('spBudget').value || '待定',
+    status: '筹备中',
+    description: document.getElementById('spDesc').value,
+    highlights: (document.getElementById('spHighlights').value || '').split(',').filter(Boolean).map(s=>s.trim()),
+    attFileName: window._spFileName || '',
+    attFileData: window._spFileData || '',
+    attFileSize: window._spFileSize || 0,
+    kindergarten: currentKinder,
+  });
+  window._spFileData = null; window._spFileName = ''; window._spFileSize = 0;
+  saveStore(); closeModal(); toast('✅ 研学方案已创建'); renderStudyTourPlans();
+}
+
+// 预览新建方案文件
+function previewNewPlanFile() {
+  const file = document.getElementById('spFileInput').files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { toast('⚠️ 文件不能超过10MB'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    window._spFileData = e.target.result;
+    window._spFileName = file.name;
+    window._spFileSize = file.size;
+    document.getElementById('spFilePreview').innerHTML = '✅ 已选择：' + file.name + ' (' + formatFileSize(file.size) + ')';
+  };
+  reader.readAsDataURL(file);
+}
+
+// 研学方案上传文件
+function handleStudyPlanFile(input, planId) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { toast('⚠️ 文件不能超过10MB'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const plan = store.studyTourPlans.find(p => p.id === planId);
+    if (plan) {
+      plan.attFileName = file.name;
+      plan.attFileData = e.target.result;
+      plan.attFileSize = file.size;
+      saveStore();
+      toast('📤 文件已上传');
+      renderStudyTourPlans();
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// 查看研学方案附件
+function viewStudyAttachedFile(fileName, fileData) {
+  const plan = store.studyTourPlans.find(p => p.attFileName === fileName);
+  const data = plan ? plan.attFileData : '';
+  if (!data) { toast('⚠️ 无附件数据'); return; }
+  const isImage = data.startsWith('data:image/');
+  if (isImage) {
+    document.getElementById('modalBox').innerHTML = '<div class="modal-title">📸 ' + fileName + '</div>' +
+      '<div style="text-align:center"><img src="' + data + '" style="max-width:100%;max-height:70vh;border-radius:8px"></div>';
+  } else {
+    document.getElementById('modalBox').innerHTML = '<div class="modal-title">📄 ' + fileName + '</div>' +
+      '<div style="padding:16px;text-align:center;color:var(--text-secondary)">文件已保存到工作台<br><br>📎 ' + fileName + '</div>';
+  }
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function viewStudyPlanDetail(id) {
+  const p = store.studyTourPlans.find(sp => sp.id === id);
+  if (!p) return;
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📋 ${p.title}</div>
+    <div class="rich-card">
+      <div style="font-size:13px;line-height:2">
+        👶 目标对象：${p.target}<br>
+        📍 研学地点：${p.location}<br>
+        📅 计划日期：${p.date}<br>
+        👥 参与人数：${p.participants}人<br>
+        💰 预算：${p.budget}<br>
+        📌 状态：${p.status}
+      </div>
+      ${p.description ? `<div style="margin-top:8px;padding:10px;background:#f8f8f8;border-radius:8px;font-size:13px;line-height:1.6">${p.description}</div>` : ''}
+      ${p.highlights ? `<div style="margin-top:8px;font-size:12px;color:var(--text-secondary)">✨ 亮点环节：${p.highlights.join('、')}</div>` : ''}
+    </div>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function completeStudyPlan(id) {
+  const p = store.studyTourPlans.find(sp => sp.id === id);
+  if (p) { p.status = '已完成'; saveStore(); toast('✅ 已标记完成'); renderStudyTourPlans(); }
+}
+
+function generateStudyMaterials(id) {
+  const p = store.studyTourPlans.find(sp => sp.id === id);
+  if (!p) return;
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📄 生成上报材料</div>
+    <div class="rich-card">
+      <b>${p.title}</b>
+      <div style="margin-top:8px;font-size:13px;line-height:2">
+        将自动生成以下材料：<br>
+        ✅ 活动方案（含背景、目标、流程、预算）<br>
+        ✅ 安全预案（交通、场地、食品、应急）<br>
+        ✅ 家长告知书（活动须知、注意事项）<br>
+        ✅ 经费预算表（明细清单）
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary btn-block" onclick="confirmGenerateMaterials(${id})">确认生成</button>
+      <button class="btn btn-outline btn-block" onclick="closeModal()">取消</button>
+    </div>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function confirmGenerateMaterials(planId) {
+  const p = store.studyTourPlans.find(sp => sp.id === planId);
+  if (!p) return;
+  const baseMaterials = [
+    { type: '活动方案', title: p.title + '活动方案', content: '一、活动背景\n为贯彻《3-6岁儿童学习与发展指南》精神，丰富幼儿社会实践经验...\n\n二、活动目标\n1. 拓展幼儿视野，丰富生活经验\n2. 培养观察能力和探究精神\n3. 增强团队协作意识\n\n三、活动安排\n日期：' + p.date + '\n地点：' + p.location + '\n对象：' + p.target + '\n人数：' + p.participants + '人\n\n四、活动流程\n08:30 集合出发\n09:00 到达目的地\n09:00-11:30 研学活动\n11:30-12:30 午餐\n12:30-14:00 继续活动\n14:00 返程\n\n五、经费预算\n' + p.budget + '\n\n六、注意事项\n1. 提前了解天气情况\n2. 准备急救药品\n3. 每位教师负责5-6名幼儿\n4. 提前与家长沟通确认' },
+    { type: '安全预案', title: p.title + '安全预案', content: '一、交通安全\n1. 租用正规运输公司车辆\n2. 每车配备随行教师\n3. 确认安全带使用\n\n二、场地安全\n1. 提前踩点确认安全性\n2. 划定活动区域\n3. 避免危险区域\n\n三、食品安全\n1. 自带饮用水\n2. 注意食品卫生\n3. 了解幼儿过敏情况\n\n四、应急预案\n1. 配备急救箱\n2. 确认最近医院位置\n3. 保持通讯畅通\n4. 突发情况立即启动预案' },
+  ];
+  baseMaterials.forEach(m => {
+    store.studyTourMaterials.unshift({
+      id: Date.now() + Math.random(), planId: p.id,
+      type: m.type, title: m.title, date: new Date().toISOString().split('T')[0],
+      status: '待上报', department: '区教育局', fileNo: '', content: m.content,
+    });
+  });
+  saveStore(); closeModal(); toast('✅ 已生成3份上报材料'); renderStudyTourPlans();
+}
+
+function renderStudyTourMaterials() {
+  const types = ['全部', '活动方案', '安全预案', '总结报告', '经费预算', '家长告知书'];
+  let html = `<div class="card">
+    <div class="card-header"><span class="card-title">📄 研学相关材料</span></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="showUploadMaterialDocModal()">📤 上传文档</button>
+      <button class="btn btn-outline btn-sm" onclick="showHistoryDocs()">📚 历史文档</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--accent)" onclick="showGenerateMaterialsModal()">📋 生成上报材料</button>
+    </div>
+    <div class="chip-group" style="margin-bottom:10px" id="matTypeChips">
+      ${types.map((t,i) => `<span class="chip ${i===0?'active':''}" onclick="filterMaterials('${t}', this)">${t}</span>`).join('')}
+    </div>
+    <div id="matList"></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:8px;font-size:14px">📊 上报统计</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:#F0FFF4;color:var(--accent3)">📤</div><div><div class="stat-num">${kf(store.studyTourMaterials).filter(m=>m.status==='已上报').length}</div><div class="stat-label">已上报</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FFF5F5;color:var(--primary)">⏳</div><div><div class="stat-num">${kf(store.studyTourMaterials).filter(m=>m.status==='待上报').length}</div><div class="stat-label">待上报</div></div></div>
+    </div>
+  </div>`;
+  document.getElementById('mainContent').innerHTML = html;
+  renderMatList('全部');
+}
+
+function renderMatList(filter) {
+  const items = filter === '全部' ? kf(store.studyTourMaterials) : kf(store.studyTourMaterials).filter(m => m.type === filter);
+  let html = items.map(m => {
+    const plan = store.studyTourPlans.find(p => p.id === m.planId);
+    return `<div class="rich-card" style="${m.status==='待上报'?'border-left:3px solid var(--accent)':''}">
+      <div class="rc-header">
+        <b>${m.title}</b>
+        <span class="tag ${m.status==='已上报'?'green':'orange'}">${m.status}</span>
+      </div>
+      <div class="rc-body">
+        📋 ${m.type} | 🏛️ ${m.department}
+        ${m.fileNo ? ` | 📎 ${m.fileNo}` : ''}
+        ${plan ? `<br>🎒 关联方案：${plan.title}` : ''}
+        ${m.attFileName ? `<div style="margin-top:4px;padding:4px 8px;background:#F0FFF4;border-radius:4px;font-size:11px">📎 已上传：${m.attFileName}${m.attFileSize ? ' (' + formatFileSize(m.attFileSize) + ')' : ''}</div>` : ''}
+      </div>
+      <div class="rc-actions" style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="viewMaterialDetail(${m.id})">👁 查看</button>
+        ${m.status === '待上报' ? `<button class="btn btn-primary btn-sm" onclick="submitMaterial(${m.id})">📤 上报</button>` : ''}
+        ${m.attFileName && m.attFileData ? `<button class="btn btn-sm" style="background:#F0F4FF;color:var(--accent2)" onclick="viewMatAttachedFile(${m.id})">📎 查看文件</button>` : ''}
+        <button class="btn btn-sm" style="background:#f0f0f0;color:var(--text-secondary)" onclick="deleteMaterial(${m.id})">🗑 删除</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('matList').innerHTML = html || '<div class="empty"><div class="empty-text">暂无材料</div></div>';
+}
+
+function filterMaterials(type, el) {
+  document.querySelectorAll('#matTypeChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderMatList(type);
+}
+
+function showAddMaterialModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📄 添加上报材料</div>
+    <div class="form-group"><label class="form-label">材料标题</label><input class="form-input" id="matTitle"></div>
+    <div class="form-group"><label class="form-label">类型</label>
+      <select class="form-input form-select" id="matType"><option>活动方案</option><option>安全预案</option><option>总结报告</option><option>经费预算</option><option>家长告知书</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">上报部门</label><input class="form-input" id="matDept" value="区教育局"></div>
+    <div class="form-group"><label class="form-label">文件编号</label><input class="form-input" id="matFileNo"></div>
+    <div class="form-group"><label class="form-label">内容</label><textarea class="form-input form-textarea" id="matContent"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="addMaterial()">添加材料</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function addMaterial() {
+  store.studyTourMaterials.unshift({
+    id: Date.now(), planId: null,
+    type: document.getElementById('matType').value,
+    title: document.getElementById('matTitle').value || '未命名材料',
+    date: new Date().toISOString().split('T')[0],
+    status: '待上报',
+    department: document.getElementById('matDept').value || '区教育局',
+    fileNo: document.getElementById('matFileNo').value,
+    content: document.getElementById('matContent').value,
+    attFileName: '', attFileData: '', attFileSize: 0,
+    kindergarten: currentKinder,
+  });
+  saveStore(); closeModal(); toast('✅ 材料已添加'); renderStudyTourMaterials();
+}
+
+function viewMaterialDetail(id) {
+  const m = store.studyTourMaterials.find(sm => sm.id === id);
+  if (!m) return;
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📄 ${m.title}</div>
+    <div class="rich-card">
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">
+        📋 ${m.type} | 🏛️ ${m.department} | 📅 ${m.date}
+        ${m.fileNo ? ` | 📎 ${m.fileNo}` : ''}
+      </div>
+      <div style="font-size:13px;line-height:1.8;white-space:pre-line;padding:10px;background:#f8f8f8;border-radius:8px">${m.content}</div>
+    </div>
+    <button class="btn btn-outline btn-block" onclick="closeModal()">关闭</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function submitMaterial(id) {
+  const m = store.studyTourMaterials.find(sm => sm.id === id);
+  if (m) {
+    m.status = '已上报';
+    if (!m.fileNo) m.fileNo = 'YX-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*900+100));
+    m.date = new Date().toISOString().split('T')[0];
+    saveStore(); toast('📤 材料已上报'); renderStudyTourMaterials();
+  }
+}
+
+function deleteMaterial(id) {
+  store.studyTourMaterials = store.studyTourMaterials.filter(m => m.id !== id);
+  saveStore(); toast('🗑️ 已删除'); renderStudyTourMaterials();
+}
+
+// ===== 研学材料 - 上传文档 =====
+function showUploadMaterialDocModal() {
+  const plans = kf(store.studyTourPlans);
+  let planOptions = plans.map(p => `<option value="${p.id}">${p.title}</option>`).join('');
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📤 上传研学文档</div>
+    <div class="form-group"><label class="form-label">材料标题</label><input class="form-input" id="matDocTitle" placeholder="如：农耕体验安全预案"></div>
+    <div class="form-group"><label class="form-label">类型</label>
+      <select class="form-input form-select" id="matDocType"><option>活动方案</option><option>安全预案</option><option>总结报告</option><option>经费预算</option><option>家长告知书</option><option>其他材料</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">关联研学方案</label>
+      <select class="form-input form-select" id="matDocPlanId"><option value="">不关联</option>${planOptions}</select>
+    </div>
+    <div class="form-group"><label class="form-label">上报部门</label><input class="form-input" id="matDocDept" value="区教育局"></div>
+    <div class="form-group">
+      <label class="form-label">📎 选择文件</label>
+      <input type="file" accept="image/*,.pdf,.doc,.docx" id="matDocFileInput" onchange="previewMatDocFile()" style="display:block;margin-top:6px;font-size:13px">
+      <div id="matDocFilePreview" style="margin-top:6px;font-size:12px;color:var(--text-secondary)"></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="uploadMatDoc()">确认上传</button>
+  `;
+  window._matDocFileData = null; window._matDocFileName = ''; window._matDocFileSize = 0;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function previewMatDocFile() {
+  const file = document.getElementById('matDocFileInput').files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { toast('⚠️ 文件不能超过10MB'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    window._matDocFileData = e.target.result;
+    window._matDocFileName = file.name;
+    window._matDocFileSize = file.size;
+    document.getElementById('matDocFilePreview').innerHTML = '✅ 已选择：' + file.name + ' (' + formatFileSize(file.size) + ')';
+  };
+  reader.readAsDataURL(file);
+}
+
+function uploadMatDoc() {
+  const planId = document.getElementById('matDocPlanId').value;
+  store.studyTourMaterials.unshift({
+    id: Date.now(),
+    planId: planId ? parseInt(planId) : null,
+    type: document.getElementById('matDocType').value,
+    title: document.getElementById('matDocTitle').value || '未命名文档',
+    date: new Date().toISOString().split('T')[0],
+    status: '待上报',
+    department: document.getElementById('matDocDept').value || '区教育局',
+    fileNo: '',
+    content: '',
+    attFileName: window._matDocFileName || '',
+    attFileData: window._matDocFileData || '',
+    attFileSize: window._matDocFileSize || 0,
+    kindergarten: currentKinder,
+  });
+  window._matDocFileData = null; window._matDocFileName = ''; window._matDocFileSize = 0;
+  saveStore(); closeModal(); toast('✅ 文档已上传'); renderStudyTourMaterials();
+}
+
+// ===== 研学材料 - 历史文档 =====
+function showHistoryDocs() {
+  const allMaterials = kf(store.studyTourMaterials).sort((a,b) => b.date.localeCompare(a.date));
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📚 历史文档</div>
+    <div style="max-height:60vh;overflow-y:auto">
+    ${allMaterials.length ? allMaterials.map(m => {
+      const plan = store.studyTourPlans.find(p => p.id === m.planId);
+      return `<div class="rich-card">
+        <div class="rc-header">
+          <b>${m.title}</b>
+          <span class="tag">${m.date}</span>
+        </div>
+        <div class="rc-body">
+          📋 ${m.type} | 🏛️ ${m.department} | ${m.status}
+          ${plan ? `<br>🎒 ${plan.title}` : ''}
+          ${m.attFileName ? `<br>📎 ${m.attFileName}` : '<br>📝 纯文本材料'}
+        </div>
+      </div>`;
+    }).join('') : '<div class="empty"><div class="empty-text">暂无历史文档</div></div>'}
+    </div>
+    <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="closeModal()">关闭</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+// ===== 研学材料 - 生成上报材料 =====
+function showGenerateMaterialsModal() {
+  const plans = kf(store.studyTourPlans);
+  if (!plans.length) { toast('⚠️ 请先创建研学方案'); return; }
+  let planOptions = plans.map(p => `<option value="${p.id}">${p.title}</option>`).join('');
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">📋 生成上报材料</div>
+    <div class="form-group"><label class="form-label">选择研学方案</label>
+      <select class="form-input form-select" id="genMatPlanId">${planOptions}</select>
+    </div>
+    <div style="font-size:13px;line-height:2;padding:10px;background:#F8F8F8;border-radius:8px">
+      将自动生成以下材料：<br>
+      ✅ 活动方案（含背景、目标、流程、预算）<br>
+      ✅ 安全预案（交通、场地、食品、应急）<br>
+      ✅ 经费预算表（明细清单）
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary btn-block" onclick="confirmGenerateMaterialsFromModal()">确认生成</button>
+      <button class="btn btn-outline btn-block" onclick="closeModal()">取消</button>
+    </div>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function confirmGenerateMaterialsFromModal() {
+  const planId = parseInt(document.getElementById('genMatPlanId').value);
+  const p = store.studyTourPlans.find(sp => sp.id === planId);
+  if (!p) return;
+  const baseMaterials = [
+    { type: '活动方案', title: p.title + '活动方案', content: '一、活动背景\n为贯彻《3-6岁儿童学习与发展指南》精神，丰富幼儿社会实践经验...\n\n二、活动目标\n1. 拓展幼儿视野，丰富生活经验\n2. 培养观察能力和探究精神\n3. 增强团队协作意识\n\n三、活动安排\n日期：' + p.date + '\n地点：' + p.location + '\n对象：' + p.target + '\n人数：' + p.participants + '人\n\n四、活动流程\n08:30 集合出发\n09:00 到达目的地\n09:00-11:30 研学活动\n11:30-12:30 午餐\n12:30-14:00 继续活动\n14:00 返程\n\n五、经费预算\n' + p.budget + '\n\n六、注意事项\n1. 提前了解天气情况\n2. 准备急救药品\n3. 每位教师负责5-6名幼儿\n4. 提前与家长沟通确认' },
+    { type: '安全预案', title: p.title + '安全预案', content: '一、交通安全\n1. 租用正规运输公司车辆\n2. 每车配备随行教师\n3. 确认安全带使用\n\n二、场地安全\n1. 提前踩点确认安全性\n2. 划定活动区域\n3. 避免危险区域\n\n三、食品安全\n1. 自带饮用水\n2. 注意食品卫生\n3. 了解幼儿过敏情况\n\n四、应急预案\n1. 配备急救箱\n2. 确认最近医院位置\n3. 保持通讯畅通\n4. 突发情况立即启动预案' },
+    { type: '经费预算', title: p.title + '经费预算表', content: '项目名称：' + p.title + '\n日期：' + p.date + '\n地点：' + p.location + '\n参与人数：' + p.participants + '人\n\n预算明细：\n总预算：' + p.budget + '\n（具体由财务部门细化）' },
+  ];
+  baseMaterials.forEach(m => {
+    store.studyTourMaterials.unshift({
+      id: Date.now() + Math.random(), planId: p.id,
+      type: m.type, title: m.title, date: new Date().toISOString().split('T')[0],
+      status: '待上报', department: '区教育局', fileNo: '', content: m.content,
+      attFileName: '', attFileData: '', attFileSize: 0, kindergarten: currentKinder,
+    });
+  });
+  saveStore(); closeModal(); toast('✅ 已生成3份上报材料'); renderStudyTourMaterials();
+}
+
+// ===== 研学材料 - 查看附件 =====
+function viewMatAttachedFile(matId) {
+  const m = store.studyTourMaterials.find(sm => sm.id === matId);
+  if (!m || !m.attFileData) { toast('⚠️ 无附件数据'); return; }
+  const isImage = m.attFileData.startsWith('data:image/');
+  if (isImage) {
+    document.getElementById('modalBox').innerHTML = '<div class="modal-title">📸 ' + m.attFileName + '</div>' +
+      '<div style="text-align:center"><img src="' + m.attFileData + '" style="max-width:100%;max-height:70vh;border-radius:8px"></div>';
+  } else {
+    document.getElementById('modalBox').innerHTML = '<div class="modal-title">📄 ' + m.attFileName + '</div>' +
+      '<div style="padding:16px;text-align:center;color:var(--text-secondary)">文件已保存到工作台<br><br>📎 ' + m.attFileName + '</div>';
+  }
+  document.getElementById('modalMask').classList.add('active');
+}
+
+// ==================== UTILS ====================
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function closeModal() {
+  document.getElementById('modalMask').classList.remove('active');
+}
+
+function showSearch() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">🔍 全局搜索</div>
+    <div class="search-bar"><input type="text" placeholder="搜索所有内容..." id="globalSearch" oninput="doGlobalSearch()"></div>
+    <div id="searchResults"></div>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+  setTimeout(() => document.getElementById('globalSearch')?.focus(), 300);
+}
+
+function doGlobalSearch() {
+  const q = document.getElementById('globalSearch').value.toLowerCase();
+  if (!q) { document.getElementById('searchResults').innerHTML = ''; return; }
+  let results = [];
+  kf(store.teachingPlans).filter(p => p.theme.toLowerCase().includes(q) || p.classes.some(c=>c.includes(q))).forEach(p => results.push(`📚 级组计划：${p.group} · ${p.planType} · ${p.theme}`));
+  kf(store.courseResources).filter(r => r.title.toLowerCase().includes(q)).forEach(r => results.push(`📁 课程资源：${r.title}`));
+  store.teachers.filter(t => t.name.includes(q) && (!t.kindergarten || t.kindergarten === currentKinder)).forEach(t => results.push(`👩‍🏫 教师：${t.name} · ${t.class}`));
+  kf(store.meetings).filter(m => m.title.toLowerCase().includes(q)).forEach(m => results.push(`📅 会议：${m.title}`));
+  kf(store.notices).filter(n => n.title.toLowerCase().includes(q)).forEach(n => results.push(`📢 通知：${n.title}`));
+  kf(store.enrollmentLeads).filter(l => l.parentName.includes(q)).forEach(l => results.push(`👋 线索：${l.parentName}`));
+  kf(store.classPromotions).filter(p => p.class.includes(q)).forEach(p => results.push(`📸 班级宣传：${p.class}`));
+  let html = results.slice(0, 20).map(r => `<div class="list-item"><span>${r}</span></div>`).join('');
+  document.getElementById('searchResults').innerHTML = html || '<div class="empty"><div class="empty-text">未找到结果</div></div>';
+}
+
+// ==================== INIT ====================
+async function init() {
+  // 1. 初始化 CloudBase（异步）
+  await initCloudBase();
+
+  // 2. 加载云端数据
+  store = await loadStore();
+
+  // 3. 首次使用：把默认数据同步到云端
+  if (cloudReady) saveStore();
+
+  const k = getKinder();
+  document.getElementById('kinderName').textContent = k.shortName;
+  document.getElementById('sidebarKinder').textContent = k.name;
+  renderSidebar();
+  renderBottomBar();
+  renderContent();
+}
+
+init();
+</script>
+</body>
+</html>
