@@ -509,9 +509,11 @@ body{
 .cal-dot.urgent{background:var(--primary)}
 .cal-dot.normal{background:var(--accent2)}
 .cal-dot.overdue{background:var(--accent)}
+.cal-dot.done{background:var(--accent3)}
 .cal-day.selected .cal-dot.urgent{background:#fff}
 .cal-day.selected .cal-dot.normal{background:#fff}
 .cal-day.selected .cal-dot.overdue{background:#fff}
+.cal-day.selected .cal-dot.done{background:#fff}
 .cal-todo-list{margin-top:10px}
 .cal-todo-date{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)}
 
@@ -1259,7 +1261,7 @@ function renderDashboard() {
   const completed = [];
   // 用户手动标记完成的待办
   kf(store.todoItems).filter(t => t.status === '已完成').forEach(t => {
-    completed.push({ icon: '\n✅', title: t.title, sub: (t.deadline ? '截止：' + t.deadline : '') + (t.note ? ' · ' + t.note : ''), tag: '已完成' });
+    completed.push({ id: t.id, icon: '\n✅', title: t.title, sub: (t.deadline ? '截止：' + t.deadline : '') + (t.note ? ' · ' + t.note : ''), tag: '已完成', completedAt: t.completedAt || '' });
   });
   let html = '';
 
@@ -1271,13 +1273,14 @@ function renderDashboard() {
       const isOverdue = p.deadline && new Date(p.deadline) < new Date(new Date().toISOString().split('T')[0]);
       const tagStyle = isUrgent ? 'red' : (isOverdue ? 'orange' : 'blue');
       const tagText = isUrgent ? '紧急' : (isOverdue ? '已逾期' : '待完成');
-      return '\n      <div class="list-item" style="cursor:pointer" onclick="toggleTodo(' + p.id + ')">' +
+      return '\n      <div class="list-item" style="cursor:pointer">' +
         '<div class="li-icon" style="background:' + (isUrgent ? '#FFF0F0' : '#F0F4FF') + ';color:' + (isUrgent ? 'var(--primary)' : 'var(--accent2)') + '">' + (p.priority === '紧急' ? '\n🔴' : '\n📌') + '</div>' +
         '<div class="li-info" style="flex:1">' +
-          '<div class="li-title" style="' + (p.status === '已完成' ? 'text-decoration:line-through;color:var(--text-light)' : '') + '">' + p.title + '</div>' +
+          '<div class="li-title">' + p.title + '</div>' +
           '<div class="li-sub">' + (p.deadline ? '\n📅 截止：' + p.deadline : '') + (p.reminderTime ? ' ⏰' + p.reminderTime : '') + (p.note ? ' · ' + p.note : '') + '</div>' +
         '</div>' +
         '<span class="tag ' + tagStyle + '" style="font-size:10px">' + tagText + '</span>' +
+        '<button class="todo-check-btn" onclick="event.stopPropagation();toggleTodo(' + p.id + ')" title="标记为已完成" style="width:28px;height:28px;border:2px solid var(--accent3);border-radius:50%;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:6px;font-size:16px;color:transparent;transition:all 0.2s" onmouseover="this.style.background=\'#F0FFF4\';this.style.color=\'var(--accent3)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'transparent\'">✓</button>' +
         '<button class="btn btn-sm" style="background:none;font-size:14px;padding:2px 6px;margin-left:4px" onclick="event.stopPropagation();deleteTodo(' + p.id + ')">\n🗑️</button>' +
       '</div>';
     }).join('');
@@ -1292,10 +1295,12 @@ function renderDashboard() {
       <div class="list-item">
         <div class="li-icon" style="background:#F0FFF4;color:var(--accent3)">${c.icon}</div>
         <div class="li-info">
-          <div class="li-title">${c.title}</div>
-          <div class="li-sub">${c.sub}</div>
+          <div class="li-title" style="text-decoration:line-through;color:var(--text-light)">${c.title}</div>
+          <div class="li-sub">${c.sub}${c.completedAt ? ' · 完成于 ' + c.completedAt : ''}</div>
         </div>
         <span class="tag green">${c.tag}</span>
+        <button class="todo-check-btn" onclick="event.stopPropagation();toggleTodo(${c.id})" title="恢复为未完成" style="width:28px;height:28px;border:2px solid var(--accent3);border-radius:50%;background:var(--accent3);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:6px;font-size:16px;color:#fff;transition:all 0.2s">✓</button>
+        <button class="btn btn-sm" style="background:none;font-size:14px;padding:2px 6px;margin-left:4px" onclick="event.stopPropagation();deleteTodo(${c.id})">🗑️</button>
       </div>
     `).join('');
   } else {
@@ -1722,9 +1727,15 @@ function addTodo() {
 function toggleTodo(id) {
   const t = store.todoItems.find(td => td.id === id);
   if (!t) return;
-  t.status = t.status === '已完成' ? '进行中' : '已完成';
+  if (t.status === '进行中') {
+    t.status = '已完成';
+    t.completedAt = new Date().toISOString().split('T')[0];
+  } else {
+    t.status = '进行中';
+    t.completedAt = '';
+  }
   saveStore();
-  toast(t.status === '已完成' ? '✅ 已标记完成' : '🔄 已恢复为进行中');
+  toast(t.status === '已完成' ? '✅ 已标记完成，已移至"已完成工作"' : '🔄 已恢复为未完成');
   renderDashboard();
 }
 
@@ -1790,7 +1801,7 @@ function renderCalendar() {
       dotsHTML = '<div class="cal-dots">';
       for (let i = 0; i < maxShow; i++) {
         const t = tdList[i];
-        const dotClass = t.priority === '紧急' ? 'urgent' : (t.status === '已完成' ? 'normal' : 'normal');
+        const dotClass = t.status === '已完成' ? 'done' : (t.priority === '紧急' ? 'urgent' : 'normal');
         dotsHTML += `<span class="cal-dot ${dotClass}"></span>`;
       }
       if (tdList.length > 3) dotsHTML += `<span style="font-size:9px;color:var(--text-light);margin-left:1px">+${tdList.length - 3}</span>`;
@@ -1819,13 +1830,15 @@ function renderCalendar() {
     if (selTodos.length) {
       selTodos.forEach(t => {
         const isUrgent = t.priority === '紧急';
-        html += `<div class="list-item" style="cursor:pointer" onclick="toggleTodo(${t.id})">
+        const isDone = t.status === '已完成';
+        html += `<div class="list-item">
           <div class="li-icon" style="background:${isUrgent ? '#FFF0F0' : '#F0F4FF'};color:${isUrgent ? 'var(--primary)' : 'var(--accent2)'}">${isUrgent ? '🔴' : '📌'}</div>
           <div class="li-info" style="flex:1">
-            <div class="li-title" style="${t.status==='已完成'?'text-decoration:line-through;color:var(--text-light)':''}">${t.title}</div>
-            <div class="li-sub">${t.note ? t.note + ' · ' : ''}${t.priority === '紧急' ? '紧急' : '普通'}${t.reminderTime ? ' · ⏰' + t.reminderTime : ''}</div>
+            <div class="li-title" style="${isDone?'text-decoration:line-through;color:var(--text-light)':''}">${t.title}</div>
+            <div class="li-sub">${t.note ? t.note + ' · ' : ''}${t.priority === '紧急' ? '紧急' : '普通'}${t.reminderTime ? ' · ⏰' + t.reminderTime : ''}${isDone && t.completedAt ? ' · 完成于 ' + t.completedAt : ''}</div>
           </div>
-          <span class="tag ${t.status==='已完成'?'green':(t.priority==='紧急'?'red':'blue')}" style="font-size:10px">${t.status==='已完成'?'已完成':(t.priority==='紧急'?'紧急':'待完成')}</span>
+          <span class="tag ${isDone?'green':(isUrgent?'red':'blue')}" style="font-size:10px">${isDone?'已完成':(isUrgent?'紧急':'待完成')}</span>
+          <button class="todo-check-btn" onclick="event.stopPropagation();toggleTodoFromCal(${t.id})" title="${isDone?'恢复为未完成':'标记为已完成'}" style="width:28px;height:28px;border:2px solid var(--accent3);border-radius:50%;background:${isDone?'var(--accent3)':'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:6px;font-size:16px;color:${isDone?'#fff':'transparent'};transition:all 0.2s" onmouseover="if(!${isDone}){this.style.background='#F0FFF4';this.style.color='var(--accent3)'}" onmouseout="if(!${isDone}){this.style.background='transparent';this.style.color='transparent'}">✓</button>
           <button class="btn btn-sm" style="background:none;font-size:14px;padding:2px 6px;margin-left:4px" onclick="event.stopPropagation();deleteTodoFromCal(${t.id})">🗑️</button>
         </div>`;
       });
@@ -1905,6 +1918,21 @@ function deleteTodoFromCal(id) {
   if (!confirm('确定删除此待办事项吗？')) return;
   store.todoItems = store.todoItems.filter(t => t.id !== id);
   saveStore(); toast('🗑️ 已删除'); renderCalendar();
+}
+
+function toggleTodoFromCal(id) {
+  const t = store.todoItems.find(td => td.id === id);
+  if (!t) return;
+  if (t.status === '进行中') {
+    t.status = '已完成';
+    t.completedAt = new Date().toISOString().split('T')[0];
+  } else {
+    t.status = '进行中';
+    t.completedAt = '';
+  }
+  saveStore();
+  toast(t.status === '已完成' ? '✅ 已标记完成' : '🔄 已恢复为未完成');
+  renderCalendar();
 }
 
 // ===== 巡班记录管理 =====
