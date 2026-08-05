@@ -919,6 +919,7 @@ function saveStore() {
 function getDefaultData() {
   return {
     // ===== 教学与课程管理 =====
+    planTypes: ['学期计划', '语言计划', '识字计划', '拼音计划', '书写计划', '美术本绘画计划'],
     teachingPlans: [
       // == 光丽幼儿园 ==
       { id:1, kindergarten:'gl', group:'大班级组', planType:'学期计划', semester:'2026秋季', theme:'我要上小学了', subjects:'健康,语言,社会,科学,艺术', progress:35, status:'进行中', createdAt:'2026-07-01', weeks:18, finished:6.3, classes:['大四','大五','大六'] },
@@ -1075,7 +1076,7 @@ const navConfig = [
   {
     id: 'teaching', icon: '📚', label: '教学与课程管理中心', color: '#FF6B6B',
     subs: [
-      { id: 'teaching-plans', label: '学期计划管理' },
+      { id: 'teaching-plans', label: '教学计划管理' },
       { id: 'course-resources', label: '课程资源库' },
       { id: 'activity-board', label: '教学活动看板' },
       { id: 'quality-analysis', label: '教学质量分析' },
@@ -1351,27 +1352,34 @@ function renderDashboard() {
   html += '<div style="text-align:center;padding:8px"><button class="btn btn-outline btn-sm" onclick="renderAllPatrolRecords()">📂 查看全部巡班记录</button></div>';
   html += '</div>';
 
-  // 板块四：级组计划查看
-  html += '<div class="section-header">📖 级组计划查看</div><div class="card">';
-  groups.forEach(g => {
-    const gpPlans = plans.filter(p => p.group === g);
-    html += `<div class="rich-card" style="margin-bottom:8px" onclick="quickNavToTeachingPlans('${g}')">
+  // 板块四：教学计划查看（按计划种类分组）
+  html += '<div class="section-header">📖 教学计划查看</div><div class="card">';
+  const typeOrder = store.planTypes || ['学期计划', '语言计划', '识字计划', '拼音计划', '书写计划', '美术本绘画计划'];
+  const typeIcons = { '学期计划': '📖', '语言计划': '💬', '识字计划': '🔤', '拼音计划': '🔡', '书写计划': '✍️', '美术本绘画计划': '🎨' };
+  // 获取所有实际使用的计划种类
+  const allUsedTypes = [...new Set(plans.map(p => p.planType))];
+  const displayTypes = [...new Set([...typeOrder, ...allUsedTypes])].filter(t => plans.some(p => p.planType === t));
+  displayTypes.forEach(pt => {
+    const tpPlans = plans.filter(p => p.planType === pt);
+    const avgProgress = tpPlans.length ? Math.round(tpPlans.reduce((s,p) => s + p.progress, 0) / tpPlans.length) : 0;
+    const icon = typeIcons[pt] || '📋';
+    html += `<div class="rich-card" style="margin-bottom:8px" onclick="quickNavToTeachingPlans('${pt}')">
       <div class="rc-header">
-        <b>${g}</b>
-        <span style="font-size:12px;color:var(--text-secondary)">${gpPlans.length}个计划</span>
+        <b>${icon} ${pt}</b>
+        <span style="font-size:12px;color:var(--text-secondary)">${tpPlans.length}个 · 平均${avgProgress}%</span>
       </div>
       <div class="rc-body">
-        ${gpPlans.map(p => {
+        ${tpPlans.map(p => {
           const barColor = p.progress >= 80 ? 'var(--accent3)' : p.progress >= 50 ? 'var(--accent2)' : 'var(--primary)';
           return `<div style="margin-bottom:6px">
             <div style="display:flex;justify-content:space-between;font-size:12px">
-              <span>${p.planType} · ${p.theme}</span>
+              <span>${p.group} · ${p.theme}</span>
               <span style="color:${barColor};font-weight:600">${p.progress}%</span>
             </div>
             <div class="progress-bar" style="height:5px;margin-top:2px"><div class="progress-fill" style="width:${p.progress}%;background:${barColor}"></div></div>
           </div>`;
         }).join('')}
-        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px">覆盖班级：${gpPlans[0]?.classes?.join('、') || '-'}</div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px">覆盖班级：${[...new Set(tpPlans.flatMap(p => p.classes || []))].join('、') || '-'}</div>
       </div>
     </div>`;
   });
@@ -1434,14 +1442,20 @@ function quickNavToTeachingPlansByClass(cls) {
   }, 200);
 }
 
-// 从首页点击级组计划卡片跳转到教学计划页面
-function quickNavToTeachingPlans(group) {
+// 从首页点击教学计划卡片跳转到教学计划页面，按计划种类筛选
+function quickNavToTeachingPlans(planType) {
   currentMenu = 'teaching';
   currentSub = 'teaching-plans';
   document.getElementById('pageTitle').textContent = '教学与课程管理';
-  currentPlanType = 'all';
-  currentPlanGroup = group;
   renderTeachingPlans();
+  // 设置筛选条件并重新渲染列表
+  currentPlanType = planType;
+  currentPlanGroup = 'all';
+  // 更新 chip 高亮
+  document.querySelectorAll('#planTypeChips .chip').forEach(c => {
+    c.classList.toggle('active', c.textContent === planType);
+  });
+  renderPlanList();
   renderSidebar();
   renderBottomBar();
   updateKinderDisplay();
@@ -1454,17 +1468,22 @@ let currentPlanGroup = 'all';
 
 function renderTeachingPlans() {
   currentPlanType = 'all'; currentPlanGroup = 'all';
-  const planTypes = ['all', '学期计划', '语言计划', '识字计划', '拼音计划', '书写计划', '美术本绘画计划'];
-  const groups = ['大班级组', '中班级组', '小班级组'];
-  const groupsWithPlans = groups.filter(g => store.teachingPlans.some(p => p.group === g));
+  const planTypes = ['all', ...(store.planTypes || ['学期计划', '语言计划', '识字计划', '拼音计划', '书写计划', '美术本绘画计划'])];
+  const groups = ['大班级组', '中班级组', '小班级组', '小小班级组'];
 
   let html = `<div class="card">
-    <div class="card-header"><span class="card-title">📋 级组计划管理</span>
-      <button class="btn btn-primary btn-sm" onclick="showAddPlanModal()">+ 一键生成</button>
+    <div class="card-header"><span class="card-title">📋 教学计划管理</span>
+      <button class="btn btn-primary btn-sm" onclick="showAddPlanModal()">+ 新增计划</button>
     </div>
     <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">按计划类型筛选</div>
     <div class="chip-group" style="margin-bottom:8px;flex-wrap:wrap" id="planTypeChips">
       ${planTypes.map((t,i) => `<span class="chip ${i===0?'active':''}" onclick="filterPlanByType('${t}', this)">${t==='all'?'全部':t}</span>`).join('')}
+    </div>
+    <div style="margin-bottom:10px;padding:8px;background:var(--bg-light);border-radius:8px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:12px;color:var(--text-secondary)">📌 计划种类管理（可增删改）</span>
+      <div>
+        <button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px;margin-right:4px" onclick="showManagePlanTypesModal()">⚙️ 管理种类</button>
+      </div>
     </div>
     <div id="planList"></div>
   </div>`;
@@ -1484,71 +1503,90 @@ function renderPlanList() {
   if (currentPlanType !== 'all') plans = plans.filter(p => p.planType === currentPlanType);
   if (currentPlanGroup !== 'all') plans = plans.filter(p => p.group === currentPlanGroup);
 
-  // Group by 级组
-  const groupOrder = ['大班级组', '中班级组', '小班级组'];
-  const grouped = {};
-  groupOrder.forEach(g => {
-    const items = plans.filter(p => p.group === g);
-    if (items.length) grouped[g] = items;
-  });
-
-  const groupIcons = { '大班级组': '🎓', '中班级组': '🧒', '小班级组': '👶' };
+  // 按计划种类分组，每种下面再按级组分组
+  const typeOrder = store.planTypes || ['学期计划', '语言计划', '识字计划', '拼音计划', '书写计划', '美术本绘画计划'];
+  const groupOrder = ['大班级组', '中班级组', '小班级组', '小小班级组'];
   const typeIcons = {
     '学期计划': '📖', '语言计划': '💬', '识字计划': '🔤', '拼音计划': '🔡',
     '书写计划': '✍️', '美术本绘画计划': '🎨'
   };
+  const groupIcons = { '大班级组': '🎓', '中班级组': '🧒', '小班级组': '👶', '小小班级组': '🧸' };
+
+  // 收集所有出现的计划种类
+  const allTypesInUse = [...new Set(plans.map(p => p.planType))];
+  const displayTypes = [...new Set([...typeOrder, ...allTypesInUse])].filter(t => plans.some(p => p.planType === t));
 
   let html = '';
-  Object.entries(grouped).forEach(([group, items]) => {
-    const avgProgress = Math.round(items.reduce((s,p) => s + p.progress, 0) / items.length);
-    html += `<div style="margin-bottom:12px">
+  if (!displayTypes.length) {
+    html = '<div class="empty"><div class="empty-text">暂无计划，点击右上角"新增计划"创建</div></div>';
+    document.getElementById('planList').innerHTML = html;
+    return;
+  }
+
+  displayTypes.forEach(pt => {
+    const typePlans = plans.filter(p => p.planType === pt);
+    const avgProgress = typePlans.length ? Math.round(typePlans.reduce((s,p) => s + p.progress, 0) / typePlans.length) : 0;
+    const icon = typeIcons[pt] || '📋';
+    html += `<div style="margin-bottom:14px">
       <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
-        <span>${groupIcons[group]} ${group}</span>
-        <span style="font-size:11px;color:var(--text-secondary)">整体进度 ${avgProgress}%</span>
+        <span>${icon} ${pt}</span>
+        <span style="font-size:11px;color:var(--text-secondary)">${typePlans.length}个计划 · 平均进度 ${avgProgress}%</span>
       </div>`;
 
-    items.forEach(p => {
-      const statusColor = p.status === '已完成' ? 'green' : (p.status === '筹备中' ? 'orange' : 'blue');
-      const pctColor = p.progress >= 80 ? 'var(--accent3)' : (p.progress >= 40 ? 'var(--accent2)' : 'var(--accent)');
-      html += `<div class="rich-card">
-        <div class="rc-header">
-          <b>${typeIcons[p.planType] || '📋'} ${p.planType} · ${p.theme}</b>
-          <span class="tag ${statusColor}">${p.status}</span>
-        </div>
-        <div class="rc-body">
-          学期：${p.semester} | 领域：${p.subjects}<br>
-          覆盖班级：${p.classes.join('、')}<br>
-          进度：已完成 ${p.finished}/${p.weeks} 周
-          <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" style="width:${p.progress}%;background:${pctColor}"></div></div>
-        </div>
-        <div class="rc-footer" style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">覆盖班级：${p.classes?.join('、') || '-'}${p.attFileName ? ' · 📎 ' + p.attFileName : ''}</div>
-        <div class="rc-actions">
-          <button class="btn btn-outline btn-sm" onclick="viewPlanDetail(${p.id})">查看详情</button>
-          <button class="btn btn-outline btn-sm" onclick="editPlan(${p.id})" style="color:var(--accent)">✏️</button>
-          <button class="btn btn-outline btn-sm" onclick="deletePlan(${p.id})" style="color:var(--primary)">🗑️</button>
-          ${p.attFileName ? '<button class="btn btn-outline btn-sm" style="color:var(--accent2)" onclick="viewAttachedFile(\'' + p.attFileName + '\', \'' + (p.attFileData || '') + '\')">📎 查看文件</button>' : ''}
-          ${p.status !== '已完成' ? `<button class="btn btn-primary btn-sm" onclick="updatePlanProgress(${p.id})">更新进度</button>` : '<span style="font-size:12px;color:var(--accent3)">✅ 已完成</span>'}
-        </div>
+    // 按级组分组
+    const allGroupsInType = [...new Set(typePlans.map(p => p.group))];
+    const displayGroups = [...new Set([...groupOrder, ...allGroupsInType])].filter(g => typePlans.some(p => p.group === g));
+
+    displayGroups.forEach(g => {
+      const groupPlans = typePlans.filter(p => p.group === g);
+      html += `<div style="margin:6px 0 8px 0;padding:6px 10px;background:var(--bg-light);border-radius:6px;font-size:12px;color:var(--text-secondary)">
+        ${groupIcons[g] || '📋'} ${g}（${groupPlans.length}个）
       </div>`;
+
+      groupPlans.forEach(p => {
+        const statusColor = p.status === '已完成' ? 'green' : (p.status === '筹备中' ? 'orange' : 'blue');
+        const pctColor = p.progress >= 80 ? 'var(--accent3)' : (p.progress >= 40 ? 'var(--accent2)' : 'var(--accent)');
+        html += `<div class="rich-card">
+          <div class="rc-header">
+            <b>${p.theme}</b>
+            <span class="tag ${statusColor}">${p.status}</span>
+          </div>
+          <div class="rc-body">
+            学期：${p.semester} | 领域：${p.subjects}<br>
+            覆盖班级：${p.classes.join('、')}<br>
+            进度：已完成 ${p.finished}/${p.weeks} 周
+            <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" style="width:${p.progress}%;background:${pctColor}"></div></div>
+          </div>
+          <div class="rc-footer" style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">覆盖班级：${p.classes?.join('、') || '-'}${p.attFileName ? ' · 📎 ' + p.attFileName : ''}</div>
+          <div class="rc-actions">
+            <button class="btn btn-outline btn-sm" onclick="viewPlanDetail(${p.id})">查看详情</button>
+            <button class="btn btn-outline btn-sm" onclick="editPlan(${p.id})" style="color:var(--accent)">✏️</button>
+            <button class="btn btn-outline btn-sm" onclick="deletePlan(${p.id})" style="color:var(--primary)">🗑️</button>
+            ${p.attFileName ? '<button class="btn btn-outline btn-sm" style="color:var(--accent2)" onclick="viewAttachedFile(\'' + p.attFileName + '\', \'' + (p.attFileData || '') + '\')">📎 查看文件</button>' : ''}
+            ${p.status !== '已完成' ? `<button class="btn btn-primary btn-sm" onclick="updatePlanProgress(${p.id})">更新进度</button>` : '<span style="font-size:12px;color:var(--accent3)">✅ 已完成</span>'}
+          </div>
+        </div>`;
+      });
     });
     html += '</div>';
   });
 
-  document.getElementById('planList').innerHTML = html || '<div class="empty"><div class="empty-text">该类型暂无计划，点击右上角一键生成</div></div>';
+  document.getElementById('planList').innerHTML = html;
 }
 
 function showAddPlanModal() {
+  const pTypes = store.planTypes || ['学期计划', '语言计划', '识字计划', '拼音计划', '书写计划', '美术本绘画计划'];
+  const groupOptions = ['大班级组', '中班级组', '小班级组', '小小班级组'];
   document.getElementById('modalBox').innerHTML = `
-    <div class="modal-title">📋 一键生成级组计划</div>
+    <div class="modal-title">📋 新增教学计划</div>
     <div class="form-group"><label class="form-label">计划类型</label>
       <select class="form-input form-select" id="planType">
-        <option>学期计划</option><option>语言计划</option><option>识字计划</option>
-        <option>拼音计划</option><option>书写计划</option><option>美术本绘画计划</option>
+        ${pTypes.map(t => `<option>${t}</option>`).join('')}
       </select>
     </div>
     <div class="form-group"><label class="form-label">级组</label>
       <select class="form-input form-select" id="planGroup">
-        <option>大班级组</option><option>中班级组</option><option>小班级组</option>
+        ${groupOptions.map(g => `<option>${g}</option>`).join('')}
       </select>
     </div>
     <div class="form-group"><label class="form-label">学期</label>
@@ -1568,7 +1606,7 @@ function showAddPlanModal() {
     </div>
     <div class="form-group"><label class="form-label">📎 上传计划文件（拍照/PDF/Word）</label><input type="file" id="planFile" accept="image/*,.pdf,.doc,.docx" style="font-size:13px;padding:4px" onchange="previewPlanFile()"></div>
     <div id="planFilePreview" style="font-size:11px;color:var(--accent3);margin-top:4px"></div>
-    <button class="btn btn-primary btn-block" onclick="addTeachingPlan()" style="margin-top:8px">一键生成计划</button>
+    <button class="btn btn-primary btn-block" onclick="addTeachingPlan()" style="margin-top:8px">✅ 创建计划</button>
   `;
   document.getElementById('modalMask').classList.add('active');
 }
@@ -1598,7 +1636,7 @@ function addTeachingPlan() {
   };
   store.teachingPlans.unshift(newPlan);
   saveStore(); closeModal();
-  toast('✅ 级组计划已生成');
+  toast('✅ 教学计划已创建');
   renderPlanList();
 }
 
@@ -1643,13 +1681,14 @@ function updatePlanProgress(id) {
 function editPlan(id) {
   const p = store.teachingPlans.find(pl => pl.id === id);
   if (!p) return;
-  document.getElementById("modalBox").innerHTML = "<div class=\"modal-title\">✏️ 编辑级组计划</div>" +
-    "<div class=\"form-group\"><label class=\"form-label\">计划类型</label><select class=\"form-input form-select\" id=\"editPlanType\">" +
-    "<option " + (p.planType==="学期计划"?"selected":"") + ">学期计划</option><option " + (p.planType==="语言计划"?"selected":"") + ">语言计划</option>" +
-    "<option " + (p.planType==="识字计划"?"selected":"") + ">识字计划</option><option " + (p.planType==="拼音计划"?"selected":"") + ">拼音计划</option>" +
-    "<option " + (p.planType==="书写计划"?"selected":"") + ">书写计划</option><option " + (p.planType==="美术本绘画计划"?"selected":"") + ">美术本绘画计划</option>" +
-    "</select></div>" +
-    "<div class=\"form-group\"><label class=\"form-label\">主题</label><input class=\"form-input\" id=\"editPlanTheme\" value=\"" + p.theme + "\"></div>" +
+  const pTypes = store.planTypes || ['学期计划', '语言计划', '识字计划', '拼音计划', '书写计划', '美术本绘画计划'];
+  const groupOptions = ['大班级组', '中班级组', '小班级组', '小小班级组'];
+  const typeOptions = pTypes.map(t => '<option ' + (p.planType===t?'selected':'') + '>' + t + '</option>').join('');
+  const groupOpts = groupOptions.map(g => '<option ' + (p.group===g?'selected':'') + '>' + g + '</option>').join('');
+  document.getElementById("modalBox").innerHTML = '<div class="modal-title">✏️ 编辑教学计划</div>' +
+    '<div class="form-group"><label class="form-label">计划类型</label><select class="form-input form-select" id="editPlanType">' + typeOptions + '</select></div>' +
+    '<div class="form-group"><label class="form-label">级组</label><select class="form-input form-select" id="editPlanGroup">' + groupOpts + '</select></div>' +
+    '<div class="form-group"><label class="form-label">主题</label><input class="form-input" id="editPlanTheme" value="' + p.theme + '"></div>' +
     "<div class=\"form-group\"><label class=\"form-label\">领域</label><input class=\"form-input\" id=\"editPlanSubjects\" value=\"" + p.subjects + "\"></div>" +
     "<div class=\"form-group\"><label class=\"form-label\">覆盖班级</label><input class=\"form-input\" id=\"editPlanClasses\" value=\"" + p.classes.join(",") + "\"></div>" +
     "<div class=\"form-group\"><label class=\"form-label\">总周数</label><input class=\"form-input\" id=\"editPlanWeeks\" type=\"number\" value=\"" + p.weeks + "\"></div>" +
@@ -1665,6 +1704,7 @@ function saveEditPlan(id) {
   const p = store.teachingPlans.find(pl => pl.id === id);
   if (!p) return;
   p.planType = document.getElementById("editPlanType").value;
+  p.group = document.getElementById("editPlanGroup").value;
   p.theme = document.getElementById("editPlanTheme").value || p.theme;
   p.subjects = document.getElementById("editPlanSubjects").value || p.subjects;
   p.classes = document.getElementById("editPlanClasses").value.split(/[,，]/).map(c => c.trim()).filter(c => c);
@@ -1684,6 +1724,77 @@ function deletePlan(id) {
     store.teachingPlans = store.teachingPlans.filter(pl => pl.id !== id);
     saveStore(); toast("🗑️ 计划已删除"); renderPlanList(); closeModal();
   }
+}
+
+// ===== 计划种类管理 =====
+function showManagePlanTypesModal() {
+  if (!store.planTypes) store.planTypes = ['学期计划', '语言计划', '识字计划', '拼音计划', '书写计划', '美术本绘画计划'];
+  renderManagePlanTypes();
+  document.getElementById('modalMask').classList.add('active');
+}
+
+function renderManagePlanTypes() {
+  const types = store.planTypes || [];
+  let listHTML = types.map((t, i) => {
+    const count = kf(store.teachingPlans).filter(p => p.planType === t).length;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg-light);border-radius:6px;margin-bottom:6px">' +
+      '<div><span style="font-size:14px;font-weight:600">' + t + '</span>' +
+      '<span style="font-size:11px;color:var(--text-secondary);margin-left:8px">' + count + '个计划</span></div>' +
+      '<div>' +
+        '<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px;margin-right:4px" onclick="renamePlanType(' + i + ')">✏️ 重命名</button>' +
+        '<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px;color:var(--primary)" onclick="deletePlanType(' + i + ')">🗑️ 删除</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('modalBox').innerHTML =
+    '<div class="modal-title">⚙️ 管理计划种类</div>' +
+    '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">可自行增加、重命名或删除计划种类</div>' +
+    '<div id="planTypeList">' + listHTML + '</div>' +
+    '<div style="margin-top:10px;display:flex;gap:8px">' +
+      '<input class="form-input" id="newPlanTypeName" placeholder="输入新种类名称，如：音乐计划" style="flex:1">' +
+      '<button class="btn btn-primary btn-sm" style="white-space:nowrap" onclick="addPlanType()">➕ 添加</button>' +
+    '</div>' +
+    '<button class="btn btn-block" style="background:#f0f0f0;margin-top:10px" onclick="closeModal()">完成</button>';
+}
+
+function addPlanType() {
+  const name = document.getElementById('newPlanTypeName').value.trim();
+  if (!name) { toast('⚠️ 请输入种类名称'); return; }
+  if (!store.planTypes) store.planTypes = [];
+  if (store.planTypes.includes(name)) { toast('⚠️ 该种类已存在'); return; }
+  store.planTypes.push(name);
+  saveStore();
+  toast('✅ 已添加"' + name + '"');
+  renderManagePlanTypes();
+}
+
+function renamePlanType(index) {
+  const oldName = store.planTypes[index];
+  const newName = prompt('请输入新的种类名称：', oldName);
+  if (!newName || newName.trim() === oldName) return;
+  const trimmed = newName.trim();
+  if (store.planTypes.includes(trimmed)) { toast('⚠️ 该种类已存在'); return; }
+  store.planTypes[index] = trimmed;
+  // 更新所有使用旧名称的计划
+  kf(store.teachingPlans).filter(p => p.planType === oldName).forEach(p => { p.planType = trimmed; });
+  saveStore();
+  toast('✅ 已重命名为"' + trimmed + '"');
+  renderManagePlanTypes();
+}
+
+function deletePlanType(index) {
+  const name = store.planTypes[index];
+  const count = kf(store.teachingPlans).filter(p => p.planType === name).length;
+  if (count > 0) {
+    toast('⚠️ 该种类下有' + count + '个计划，请先删除或迁移计划');
+    return;
+  }
+  if (!confirm('确定删除种类"' + name + '"吗？')) return;
+  store.planTypes.splice(index, 1);
+  saveStore();
+  toast('🗑️ 已删除"' + name + '"');
+  renderManagePlanTypes();
 }
 
 function showAddTodoModal() {
@@ -4019,7 +4130,7 @@ function doGlobalSearch() {
   const q = document.getElementById('globalSearch').value.toLowerCase();
   if (!q) { document.getElementById('searchResults').innerHTML = ''; return; }
   let results = [];
-  kf(store.teachingPlans).filter(p => p.theme.toLowerCase().includes(q) || p.classes.some(c=>c.includes(q))).forEach(p => results.push(`📚 级组计划：${p.group} · ${p.planType} · ${p.theme}`));
+  kf(store.teachingPlans).filter(p => p.theme.toLowerCase().includes(q) || p.classes.some(c=>c.includes(q))).forEach(p => results.push(`📚 教学计划：${p.planType} · ${p.group} · ${p.theme}`));
   kf(store.courseResources).filter(r => r.title.toLowerCase().includes(q)).forEach(r => results.push(`📁 课程资源：${r.title}`));
   store.teachers.filter(t => t.name.includes(q) && (!t.kindergarten || t.kindergarten === currentKinder)).forEach(t => results.push(`👩‍🏫 教师：${t.name} · ${t.class}`));
   kf(store.meetings).filter(m => m.title.toLowerCase().includes(q)).forEach(m => results.push(`📅 会议：${m.title}`));
