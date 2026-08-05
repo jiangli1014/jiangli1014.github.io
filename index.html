@@ -566,6 +566,29 @@ body{
   margin-top: 16px; background: var(--primary); color: #fff; border: none;
   padding: 10px 40px; border-radius: 24px; font-size: 15px; cursor: pointer;
 }
+
+/* 待办提醒弹窗 */
+.reminder-alert{
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+  color: #fff; padding: 12px 16px; font-size: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  animation: reminderSlide 0.5s ease;
+  display: flex; align-items: center; gap: 10px;
+  max-width: 480px; margin: 0 auto;
+}
+@keyframes reminderSlide{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+.reminder-alert .ra-icon{font-size:24px;animation:bellShake 1s infinite}
+@keyframes bellShake{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
+.reminder-alert .ra-content{flex:1}
+.reminder-alert .ra-title{font-weight:700;font-size:15px}
+.reminder-alert .ra-sub{font-size:12px;opacity:0.9;margin-top:2px}
+.reminder-alert .ra-actions{display:flex;gap:8px}
+.reminder-alert .ra-btn{
+  background:rgba(255,255,255,0.25);border:none;color:#fff;
+  padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;white-space:nowrap;
+}
+.reminder-alert .ra-btn:active{background:rgba(255,255,255,0.4)}
 </style>
 <script src="https://web.sdk.qcloud.com/tcb/3.11.0/tcb.js"></script>
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1252,7 +1275,7 @@ function renderDashboard() {
         '<div class="li-icon" style="background:' + (isUrgent ? '#FFF0F0' : '#F0F4FF') + ';color:' + (isUrgent ? 'var(--primary)' : 'var(--accent2)') + '">' + (p.priority === '紧急' ? '\n🔴' : '\n📌') + '</div>' +
         '<div class="li-info" style="flex:1">' +
           '<div class="li-title" style="' + (p.status === '已完成' ? 'text-decoration:line-through;color:var(--text-light)' : '') + '">' + p.title + '</div>' +
-          '<div class="li-sub">' + (p.deadline ? '\n📅 截止：' + p.deadline : '') + (p.note ? ' · ' + p.note : '') + '</div>' +
+          '<div class="li-sub">' + (p.deadline ? '\n📅 截止：' + p.deadline : '') + (p.reminderTime ? ' ⏰' + p.reminderTime : '') + (p.note ? ' · ' + p.note : '') + '</div>' +
         '</div>' +
         '<span class="tag ' + tagStyle + '" style="font-size:10px">' + tagText + '</span>' +
         '<button class="btn btn-sm" style="background:none;font-size:14px;padding:2px 6px;margin-left:4px" onclick="event.stopPropagation();deleteTodo(' + p.id + ')">\n🗑️</button>' +
@@ -1659,10 +1682,12 @@ function deletePlan(id) {
 }
 
 function showAddTodoModal() {
+  var today = new Date().toISOString().split('T')[0];
   document.getElementById('modalBox').innerHTML = '<div class="modal-title">\n📝 新增待办事项</div>' +
     '<div class="form-group"><label class="form-label">事项名称</label><input class="form-input" id="todoTitle" placeholder="如：完成大班语言计划初稿"></div>' +
     '<div class="form-group"><label class="form-label">优先级</label><select class="form-input form-select" id="todoPriority"><option>普通</option><option>紧急</option></select></div>' +
-    '<div class="form-group"><label class="form-label">截止日期</label><input class="form-input" id="todoDeadline" type="date"></div>' +
+    '<div class="form-group"><label class="form-label">截止日期</label><input class="form-input" id="todoDeadline" type="date" value="' + today + '"></div>' +
+    '<div class="form-group"><label class="form-label">⏰ 提醒时间</label><input class="form-input" id="todoReminder" type="time" value="09:00"><div style="font-size:11px;color:var(--text-light);margin-top:4px">到时间会弹窗提醒你</div></div>' +
     '<div class="form-group"><label class="form-label">备注</label><input class="form-input" id="todoNote" placeholder="可选"></div>' +
     '<button class="btn btn-primary btn-block" onclick="addTodo()">✅ 创建待办</button>';
   document.getElementById('modalMask').classList.add('active');
@@ -1671,15 +1696,27 @@ function showAddTodoModal() {
 function addTodo() {
   const title = document.getElementById('todoTitle').value.trim();
   if (!title) { toast('⚠️ 请输入事项名称'); return; }
+  var deadline = document.getElementById('todoDeadline').value;
+  var reminder = document.getElementById('todoReminder').value;
+  var reminderDateTime = null;
+  if (deadline && reminder) {
+    reminderDateTime = deadline + 'T' + reminder + ':00';
+  } else if (deadline) {
+    reminderDateTime = deadline + 'T09:00:00';
+  }
   store.todoItems.unshift({
     id: Date.now(), title: title,
     priority: document.getElementById('todoPriority').value,
-    deadline: document.getElementById('todoDeadline').value,
+    deadline: deadline,
+    reminderTime: reminder,
+    reminderDateTime: reminderDateTime,
+    reminderTriggered: false,
     note: document.getElementById('todoNote').value.trim(),
     status: '进行中', kindergarten: currentKinder,
     createdAt: new Date().toISOString().split('T')[0]
   });
-  saveStore(); closeModal(); toast('✅ 待办已添加'); renderDashboard();
+  saveStore(); closeModal(); toast('✅ 待办已添加' + (reminderDateTime ? '，将在 ' + deadline + ' ' + reminder + ' 提醒' : '')); renderDashboard();
+  requestNotificationPermission();
 }
 
 function toggleTodo(id) {
@@ -1786,7 +1823,7 @@ function renderCalendar() {
           <div class="li-icon" style="background:${isUrgent ? '#FFF0F0' : '#F0F4FF'};color:${isUrgent ? 'var(--primary)' : 'var(--accent2)'}">${isUrgent ? '🔴' : '📌'}</div>
           <div class="li-info" style="flex:1">
             <div class="li-title" style="${t.status==='已完成'?'text-decoration:line-through;color:var(--text-light)':''}">${t.title}</div>
-            <div class="li-sub">${t.note ? t.note + ' · ' : ''}${t.priority === '紧急' ? '紧急' : '普通'}</div>
+            <div class="li-sub">${t.note ? t.note + ' · ' : ''}${t.priority === '紧急' ? '紧急' : '普通'}${t.reminderTime ? ' · ⏰' + t.reminderTime : ''}</div>
           </div>
           <span class="tag ${t.status==='已完成'?'green':(t.priority==='紧急'?'red':'blue')}" style="font-size:10px">${t.status==='已完成'?'已完成':(t.priority==='紧急'?'紧急':'待完成')}</span>
           <button class="btn btn-sm" style="background:none;font-size:14px;padding:2px 6px;margin-left:4px" onclick="event.stopPropagation();deleteTodoFromCal(${t.id})">🗑️</button>
@@ -1832,6 +1869,7 @@ function showCalendarTodoModal(date) {
     '<div class="form-group"><label class="form-label">事项名称</label><input class="form-input" id="todoTitle" placeholder="如：完成大班语言计划初稿"></div>' +
     '<div class="form-group"><label class="form-label">优先级</label><select class="form-input form-select" id="todoPriority"><option>普通</option><option>紧急</option></select></div>' +
     '<div class="form-group"><label class="form-label">截止日期</label><input class="form-input" id="todoDeadline" type="date" value="' + date + '"></div>' +
+    '<div class="form-group"><label class="form-label">⏰ 提醒时间</label><input class="form-input" id="todoReminder" type="time" value="09:00"><div style="font-size:11px;color:var(--text-light);margin-top:4px">到时间会弹窗提醒你</div></div>' +
     '<div class="form-group"><label class="form-label">备注</label><input class="form-input" id="todoNote" placeholder="可选"></div>' +
     '<button class="btn btn-primary btn-block" onclick="addTodoFromCal()">✅ 创建待办</button>';
   document.getElementById('modalMask').classList.add('active');
@@ -1840,15 +1878,27 @@ function showCalendarTodoModal(date) {
 function addTodoFromCal() {
   const title = document.getElementById('todoTitle').value.trim();
   if (!title) { toast('⚠️ 请输入事项名称'); return; }
+  var deadline = document.getElementById('todoDeadline').value;
+  var reminder = document.getElementById('todoReminder').value;
+  var reminderDateTime = null;
+  if (deadline && reminder) {
+    reminderDateTime = deadline + 'T' + reminder + ':00';
+  } else if (deadline) {
+    reminderDateTime = deadline + 'T09:00:00';
+  }
   store.todoItems.unshift({
     id: Date.now(), title: title,
     priority: document.getElementById('todoPriority').value,
-    deadline: document.getElementById('todoDeadline').value,
+    deadline: deadline,
+    reminderTime: reminder,
+    reminderDateTime: reminderDateTime,
+    reminderTriggered: false,
     note: document.getElementById('todoNote').value.trim(),
     status: '进行中', kindergarten: currentKinder,
     createdAt: new Date().toISOString().split('T')[0]
   });
-  saveStore(); closeModal(); toast('✅ 待办已添加'); calSelectedDate = document.getElementById('todoDeadline').value; renderCalendar();
+  saveStore(); closeModal(); toast('✅ 待办已添加' + (reminderDateTime ? '，将在 ' + deadline + ' ' + reminder + ' 提醒' : '')); calSelectedDate = document.getElementById('todoDeadline').value; renderCalendar();
+  requestNotificationPermission();
 }
 
 function deleteTodoFromCal(id) {
@@ -3952,6 +4002,72 @@ function doGlobalSearch() {
   document.getElementById('searchResults').innerHTML = html || '<div class="empty"><div class="empty-text">未找到结果</div></div>';
 }
 
+// ==================== 待办提醒功能 ====================
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function checkReminders() {
+  if (!store || !store.todoItems) return;
+  var now = new Date();
+  var triggered = [];
+  kf(store.todoItems).forEach(function(t) {
+    if (t.status !== '进行中') return;
+    if (t.reminderTriggered) return;
+    if (!t.reminderDateTime) return;
+    var remTime = new Date(t.reminderDateTime);
+    if (now >= remTime) {
+      t.reminderTriggered = true;
+      triggered.push(t);
+    }
+  });
+  if (triggered.length > 0) {
+    saveStore();
+    triggered.forEach(function(t) {
+      showReminderAlert(t);
+    });
+  }
+}
+
+function showReminderAlert(t) {
+  // 浏览器通知
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification('⏰ 待办提醒：' + t.title, {
+        body: '截止日期：' + (t.deadline || '今天') + (t.reminderTime ? ' ' + t.reminderTime : '') + (t.note ? '\n' + t.note : ''),
+        tag: 'todo-' + t.id,
+        requireInteraction: true
+      });
+    } catch(e) {}
+  }
+  // 页面内提醒横幅
+  var alert = document.createElement('div');
+  alert.className = 'reminder-alert';
+  alert.id = 'reminder-' + t.id;
+  alert.innerHTML =
+    '<div class="ra-icon">🔔</div>' +
+    '<div class="ra-content">' +
+      '<div class="ra-title">' + t.title + '</div>' +
+      '<div class="ra-sub">📅 ' + (t.deadline || '今天') + (t.reminderTime ? ' · ⏰ ' + t.reminderTime : '') + (t.priority === '紧急' ? ' · 🔴紧急' : '') + '</div>' +
+    '</div>' +
+    '<div class="ra-actions">' +
+      '<button class="ra-btn" onclick="toggleTodo(' + t.id + ');dismissReminder(' + t.id + ')">✅完成</button>' +
+      '<button class="ra-btn" onclick="dismissReminder(' + t.id + ')">稍后</button>' +
+    '</div>';
+  document.body.appendChild(alert);
+  // 振动提醒
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+  // 15秒后自动消失
+  setTimeout(function() { dismissReminder(t.id); }, 15000);
+}
+
+function dismissReminder(id) {
+  var el = document.getElementById('reminder-' + id);
+  if (el) { el.style.transition = 'transform 0.3s'; el.style.transform = 'translateY(-100%)'; setTimeout(function(){ el.remove(); }, 300); }
+}
+
 // ==================== INIT ====================
 async function init() {
   // 1. 初始化 CloudBase（异步）
@@ -3969,6 +4085,9 @@ async function init() {
   renderSidebar();
   renderBottomBar();
   renderContent();
+  // 启动待办提醒检查（每30秒检查一次）
+  checkReminders();
+  setInterval(checkReminders, 30000);
 }
 
 init();
