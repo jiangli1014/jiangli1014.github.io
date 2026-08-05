@@ -676,7 +676,7 @@ body{
 
 <script>
 // ==================== 幼儿园配置 ====================
-const kindergartens = {
+const DEFAULT_KINDERS = {
   'gl': {
     id: 'gl', name: '光丽幼儿园', shortName: '光丽',
     groups: {
@@ -698,16 +698,46 @@ const kindergartens = {
     allClasses: ['大一','大二','大三','中一','中二','小一','小二','小小班']
   }
 };
+let kindergartens = JSON.parse(JSON.stringify(DEFAULT_KINDERS));
 let currentKinder = 'gl';
-const GLS_CLASSES = { gl: kindergartens.gl.allClasses, glyb: kindergartens.glyb.allClasses };
+
+function loadKinderConfig() {
+  try {
+    const saved = localStorage.getItem('kinder_config');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // 合并：保留默认结构，覆盖用户修改
+      Object.keys(DEFAULT_KINDERS).forEach(kid => {
+        if (parsed[kid]) {
+          kindergartens[kid] = parsed[kid];
+        }
+      });
+    }
+  } catch(e) {}
+}
+
+function saveKinderConfig() {
+  try {
+    localStorage.setItem('kinder_config', JSON.stringify(kindergartens));
+  } catch(e) {}
+}
+
+function getKinder() { return kindergartens[currentKinder]; }
+function getKinderClasses() { return getKinder().allClasses; }
+function getKinderGroups() { return getKinder().groups; }
+
+function rebuildAllClasses(kid) {
+  const k = kindergartens[kid];
+  k.allClasses = [];
+  Object.keys(k.groups).forEach(g => {
+    k.allClasses = k.allClasses.concat(k.groups[g]);
+  });
+}
 
 // Calendar state
 let calendarYear, calendarMonth;
 let calSelectedDate = '';
 
-function getKinder() { return kindergartens[currentKinder]; }
-function getKinderClasses() { return getKinder().allClasses; }
-function getKinderGroups() { return getKinder().groups; }
 // 过滤当前园所数据；无kindergarten字段的（qualityData等全局数据）保留
 function kf(arr) { return (arr && arr.filter) ? arr.filter(item => !item.kindergarten || item.kindergarten === currentKinder) : (arr || []); }
 
@@ -1480,9 +1510,10 @@ function renderTeachingPlans() {
       ${planTypes.map((t,i) => `<span class="chip ${i===0?'active':''}" onclick="filterPlanByType('${t}', this)">${t==='all'?'全部':t}</span>`).join('')}
     </div>
     <div style="margin-bottom:10px;padding:8px;background:var(--bg-light);border-radius:8px;display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:12px;color:var(--text-secondary)">📌 计划种类管理（可增删改）</span>
+      <span style="font-size:12px;color:var(--text-secondary)">⚙️ 管理设置</span>
       <div>
-        <button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px;margin-right:4px" onclick="showManagePlanTypesModal()">⚙️ 管理种类</button>
+        <button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px;margin-right:4px" onclick="showManagePlanTypesModal()">📚 计划种类</button>
+        <button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px" onclick="showClassManageModal()">🏫 班级管理</button>
       </div>
     </div>
     <div id="planList"></div>
@@ -1598,8 +1629,11 @@ function showAddPlanModal() {
     <div class="form-group"><label class="form-label">涉及领域</label>
       <input class="form-input" id="planSubjects" placeholder="如：健康,语言,科学">
     </div>
-    <div class="form-group"><label class="form-label">覆盖班级（逗号分隔）</label>
-      <input class="form-input" id="planClasses" placeholder="如：大一班,大二班">
+    <div class="form-group"><label class="form-label">覆盖班级（勾选）</label>
+      <div id="planClassesBox" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:var(--bg-light);border-radius:8px">
+        ${getKinderClasses().map(c => `<label style="display:flex;align-items:center;gap:3px;font-size:13px;padding:3px 8px;background:#fff;border-radius:6px;cursor:pointer"><input type="checkbox" value="${c}" style="margin:0"> ${c}</label>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text-light);margin-top:4px">在上方"班级管理"中可添加新班级</div>
     </div>
     <div class="form-group"><label class="form-label">教学周数</label>
       <input class="form-input" id="planWeeks" type="number" value="16" min="8" max="20">
@@ -1632,8 +1666,11 @@ function addTeachingPlan() {
     createdAt: new Date().toISOString().split('T')[0],
     weeks: parseInt(document.getElementById('planWeeks').value) || 16,
     finished: 0,
-    classes: (getKinderGroups()[document.getElementById('planGroup').value] || ['待分配']),
+    classes: Array.from(document.querySelectorAll('#planClassesBox input:checked')).map(cb => cb.value),
   };
+  if (newPlan.classes.length === 0) {
+    newPlan.classes = (getKinderGroups()[document.getElementById('planGroup').value] || ['待分配']);
+  }
   store.teachingPlans.unshift(newPlan);
   saveStore(); closeModal();
   toast('✅ 教学计划已创建');
@@ -1690,7 +1727,7 @@ function editPlan(id) {
     '<div class="form-group"><label class="form-label">级组</label><select class="form-input form-select" id="editPlanGroup">' + groupOpts + '</select></div>' +
     '<div class="form-group"><label class="form-label">主题</label><input class="form-input" id="editPlanTheme" value="' + p.theme + '"></div>' +
     "<div class=\"form-group\"><label class=\"form-label\">领域</label><input class=\"form-input\" id=\"editPlanSubjects\" value=\"" + p.subjects + "\"></div>" +
-    "<div class=\"form-group\"><label class=\"form-label\">覆盖班级</label><input class=\"form-input\" id=\"editPlanClasses\" value=\"" + p.classes.join(",") + "\"></div>" +
+    '<div class="form-group"><label class="form-label">覆盖班级（勾选）</label><div id="editPlanClassesBox" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:var(--bg-light);border-radius:8px">' + getKinderClasses().map(c => '<label style="display:flex;align-items:center;gap:3px;font-size:13px;padding:3px 8px;background:#fff;border-radius:6px;cursor:pointer"><input type="checkbox" value="' + c + '" ' + (p.classes.includes(c) ? 'checked' : '') + ' style="margin:0"> ' + c + '</label>').join('') + '</div></div>' +
     "<div class=\"form-group\"><label class=\"form-label\">总周数</label><input class=\"form-input\" id=\"editPlanWeeks\" type=\"number\" value=\"" + p.weeks + "\"></div>" +
     "<div class=\"form-group\"><label class=\"form-label\">完成周数</label><input class=\"form-input\" id=\"editPlanFinished\" type=\"number\" value=\"" + p.finished + "\"></div>" +
     "<div class=\"form-group\"><label class=\"form-label\">📎 上传计划文件（拍照/PDF/Word）</label><input type=\"file\" id=\"editPlanFile\" accept=\"image/*,.pdf,.doc,.docx\" style=\"font-size:13px;padding:4px\" onchange=\"previewEditPlanFile()\"></div>" +
@@ -1707,7 +1744,7 @@ function saveEditPlan(id) {
   p.group = document.getElementById("editPlanGroup").value;
   p.theme = document.getElementById("editPlanTheme").value || p.theme;
   p.subjects = document.getElementById("editPlanSubjects").value || p.subjects;
-  p.classes = document.getElementById("editPlanClasses").value.split(/[,，]/).map(c => c.trim()).filter(c => c);
+  p.classes = Array.from(document.querySelectorAll('#editPlanClassesBox input:checked')).map(cb => cb.value);
   p.weeks = parseInt(document.getElementById("editPlanWeeks").value) || p.weeks;
   p.finished = Math.min(parseInt(document.getElementById("editPlanFinished").value) || p.finished, p.weeks);
   p.progress = Math.round((p.finished / p.weeks) * 100);
@@ -1795,6 +1832,102 @@ function deletePlanType(index) {
   saveStore();
   toast('🗑️ 已删除"' + name + '"');
   renderManagePlanTypes();
+}
+
+// ===== 班级管理 =====
+function showClassManageModal() {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-title">🏫 班级管理 — ${getKinder().name}</div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">可以添加、删除、重命名班级。修改后所有计划中的班级会自动更新。</div>
+    <div id="classManageList" style="max-height:400px;overflow-y:auto"></div>
+    <div style="margin-top:12px;padding:10px;background:var(--bg-light);border-radius:8px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">➕ 添加新班级</div>
+      <div class="form-group" style="margin-bottom:6px">
+        <select class="form-input form-select" id="newClassGroup" style="font-size:13px">
+          <option>大班级组</option><option>中班级组</option><option>小班级组</option><option>小小班级组</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px">
+        <input class="form-input" id="newClassName" placeholder="如：大七班" style="flex:1;font-size:13px">
+        <button class="btn btn-primary btn-sm" onclick="addClassItem()">添加</button>
+      </div>
+    </div>
+    <button class="btn btn-block" style="background:#f0f0f0;margin-top:10px" onclick="closeModal()">完成</button>
+  `;
+  document.getElementById('modalMask').classList.add('active');
+  renderClassManageList();
+}
+
+function renderClassManageList() {
+  const groups = getKinderGroups();
+  const groupIcons = { '大班级组': '🎓', '中班级组': '🧒', '小班级组': '👶', '小小班级组': '🧸' };
+  let html = '';
+  Object.entries(groups).forEach(([group, classes]) => {
+    html += `<div style="margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">${groupIcons[group] || '📋'} ${group}</div>`;
+    classes.forEach((cls, idx) => {
+      html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;padding:4px 8px;background:var(--bg-light);border-radius:6px">
+        <input class="form-input" value="${cls}" style="flex:1;font-size:13px;padding:4px 8px" id="cls-${group}-${idx}" onchange="renameClassItem('${group}', ${idx}, this.value)">
+        <button class="btn btn-sm" style="background:none;color:var(--primary);padding:2px 6px;font-size:14px" onclick="deleteClassItem('${group}', ${idx})">🗑️</button>
+      </div>`;
+    });
+    if (classes.length === 0) {
+      html += '<div style="font-size:12px;color:var(--text-light);padding:4px 8px">暂无班级</div>';
+    }
+    html += '</div>';
+  });
+  document.getElementById('classManageList').innerHTML = html;
+}
+
+function addClassItem() {
+  const group = document.getElementById('newClassGroup').value;
+  const name = document.getElementById('newClassName').value.trim();
+  if (!name) { toast('⚠️ 请输入班级名称'); return; }
+  const k = getKinder();
+  if (k.groups[group].includes(name)) { toast('⚠️ 该班级已存在'); return; }
+  k.groups[group].push(name);
+  rebuildAllClasses(currentKinder);
+  saveKinderConfig();
+  document.getElementById('newClassName').value = '';
+  toast('✅ 已添加"' + name + '"');
+  renderClassManageList();
+}
+
+function deleteClassItem(group, idx) {
+  const k = getKinder();
+  const cls = k.groups[group][idx];
+  const inUse = kf(store.teachingPlans).some(p => (p.classes || []).includes(cls));
+  if (inUse) {
+    toast('⚠️ 班级"' + cls + '"正在被计划使用，请先从计划中移除');
+    return;
+  }
+  if (!confirm('确定删除班级"' + cls + '"吗？')) return;
+  k.groups[group].splice(idx, 1);
+  rebuildAllClasses(currentKinder);
+  saveKinderConfig();
+  toast('🗑️ 已删除"' + cls + '"');
+  renderClassManageList();
+}
+
+function renameClassItem(group, idx, newName) {
+  newName = newName.trim();
+  if (!newName) { toast('⚠️ 班级名称不能为空'); renderClassManageList(); return; }
+  const k = getKinder();
+  const oldName = k.groups[group][idx];
+  if (oldName === newName) return;
+  if (k.groups[group].includes(newName)) { toast('⚠️ 该名称已存在'); renderClassManageList(); return; }
+  k.groups[group][idx] = newName;
+  rebuildAllClasses(currentKinder);
+  saveKinderConfig();
+  // 更新所有计划中的班级名称
+  store.teachingPlans.forEach(p => {
+    if (p.classes) {
+      const i = p.classes.indexOf(oldName);
+      if (i >= 0) p.classes[i] = newName;
+    }
+  });
+  saveStore();
+  toast('✅ 已重命名为"' + newName + '"');
 }
 
 function showAddTodoModal() {
@@ -4198,8 +4331,7 @@ function showReminderAlert(t) {
   document.body.appendChild(alert);
   // 振动提醒
   if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
-  // 15秒后自动消失
-  setTimeout(function() { dismissReminder(t.id); }, 15000);
+  // 不自动消失，等用户操作
 }
 
 function dismissReminder(id) {
@@ -4207,8 +4339,48 @@ function dismissReminder(id) {
   if (el) { el.style.transition = 'transform 0.3s'; el.style.transform = 'translateY(-100%)'; setTimeout(function(){ el.remove(); }, 300); }
 }
 
+// 打开应用时检查所有逾期待办（即使没有设提醒时间）
+function checkOverdueOnOpen() {
+  if (!store || !store.todoItems) return;
+  var today = new Date().toISOString().split('T')[0];
+  var overdue = kf(store.todoItems).filter(function(t) {
+    if (t.status !== '进行中') return false;
+    if (t.deadline && t.deadline < today) return true;
+    if (t.reminderDateTime && new Date(t.reminderDateTime) < new Date() && !t.reminderTriggered) return true;
+    return false;
+  });
+  if (overdue.length === 0) return;
+  // 显示逾期待办汇总横幅
+  var banner = document.createElement('div');
+  banner.className = 'reminder-alert';
+  banner.id = 'overdue-banner';
+  banner.style.background = 'linear-gradient(135deg, #FF4757, #FF6B6B)';
+  var itemsHtml = overdue.slice(0, 5).map(function(t) {
+    return '<div style="margin-top:6px;padding:4px 8px;background:rgba(255,255,255,0.15);border-radius:6px;font-size:12px">' +
+      '<b>' + t.title + '</b>' +
+      (t.deadline ? ' · 📅 ' + t.deadline : '') +
+      (t.priority === '紧急' ? ' · 🔴紧急' : '') +
+    '</div>';
+  }).join('');
+  if (overdue.length > 5) itemsHtml += '<div style="font-size:11px;margin-top:4px;opacity:0.8">还有' + (overdue.length - 5) + '条...</div>';
+  banner.innerHTML =
+    '<div class="ra-icon">⚠️</div>' +
+    '<div class="ra-content">' +
+      '<div class="ra-title">你有 ' + overdue.length + ' 条逾期待办</div>' +
+      itemsHtml +
+    '</div>' +
+    '<div class="ra-actions">' +
+      '<button class="ra-btn" onclick="dismissReminder(\'overdue-banner\')">知道了</button>' +
+    '</div>';
+  document.body.appendChild(banner);
+  if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+}
+
 // ==================== INIT ====================
 async function init() {
+  // 0. 加载幼儿园配置（班级等）
+  loadKinderConfig();
+
   // 1. 初始化 CloudBase（异步）
   await initCloudBase();
 
@@ -4227,6 +4399,8 @@ async function init() {
   // 启动待办提醒检查（每30秒检查一次）
   checkReminders();
   setInterval(checkReminders, 30000);
+  // 打开应用时检查逾期待办
+  setTimeout(checkOverdueOnOpen, 1000);
 }
 
 init();
