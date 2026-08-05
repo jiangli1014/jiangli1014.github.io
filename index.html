@@ -1288,6 +1288,18 @@ function renderDashboard() {
 
     // 待办事项 - 用户手动管理
   const pending = kf(store.todoItems).filter(t => t.status === '进行中');
+  // 排序：紧急优先，其次按截止日期升序，无截止日期排最后
+  pending.sort((a, b) => {
+    const aUrgent = a.priority === '紧急' ? 1 : 0;
+    const bUrgent = b.priority === '紧急' ? 1 : 0;
+    if (aUrgent !== bUrgent) return bUrgent - aUrgent;
+    const aDate = a.deadline || '9999-12-31';
+    const bDate = b.deadline || '9999-12-31';
+    if (aDate !== bDate) return aDate.localeCompare(bDate);
+    const aTime = a.reminderTime || '99:99';
+    const bTime = b.reminderTime || '99:99';
+    return aTime.localeCompare(bTime);
+  });
   // 已完成工作汇总（用户完成的待办 + 自动汇总）
   const completed = [];
   // 用户手动标记完成的待办
@@ -1308,7 +1320,8 @@ function renderDashboard() {
         '<div class="li-icon" style="background:' + (isUrgent ? '#FFF0F0' : '#F0F4FF') + ';color:' + (isUrgent ? 'var(--primary)' : 'var(--accent2)') + '">' + (p.priority === '紧急' ? '\n🔴' : '\n📌') + '</div>' +
         '<div class="li-info" style="flex:1">' +
           '<div class="li-title">' + p.title + '</div>' +
-          '<div class="li-sub">' + (p.deadline ? '\n📅 截止：' + p.deadline : '') + (p.reminderTime ? ' ⏰' + p.reminderTime : '') + (p.note ? ' · ' + p.note : '') + '</div>' +
+          '<div class="li-sub" style="white-space:normal;line-height:1.5">' + (p.deadline ? '📅 截止：' + p.deadline : '') + (p.reminderTime ? (p.deadline ? '  ' : '') + '⏰提醒：' + p.reminderTime : '') + '</div>' +
+          (p.note ? '<div class="li-sub" style="white-space:normal;line-height:1.5;color:var(--text-light)">📝 ' + p.note + '</div>' : '') +
         '</div>' +
         '<span class="tag ' + tagStyle + '" style="font-size:10px">' + tagText + '</span>' +
         '<button class="todo-check-btn" onclick="event.stopPropagation();toggleTodo(' + p.id + ')" title="标记为已完成" style="width:28px;height:28px;border:2px solid var(--accent3);border-radius:50%;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:6px;font-size:16px;color:transparent;transition:all 0.2s" onmouseover="this.style.background=\'#F0FFF4\';this.style.color=\'var(--accent3)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'transparent\'">✓</button>' +
@@ -2079,7 +2092,8 @@ function renderCalendar() {
           <div class="li-icon" style="background:${isUrgent ? '#FFF0F0' : '#F0F4FF'};color:${isUrgent ? 'var(--primary)' : 'var(--accent2)'}">${isUrgent ? '🔴' : '📌'}</div>
           <div class="li-info" style="flex:1">
             <div class="li-title" style="${isDone?'text-decoration:line-through;color:var(--text-light)':''}">${t.title}</div>
-            <div class="li-sub">${t.note ? t.note + ' · ' : ''}${t.priority === '紧急' ? '紧急' : '普通'}${t.reminderTime ? ' · ⏰' + t.reminderTime : ''}${isDone && t.completedAt ? ' · 完成于 ' + t.completedAt : ''}</div>
+            <div class="li-sub" style="white-space:normal;line-height:1.5">${t.priority === '紧急' ? '🔴 紧急' : '📋 普通'}${t.reminderTime ? '  ⏰提醒：' + t.reminderTime : ''}${isDone && t.completedAt ? '  ✅完成于 ' + t.completedAt : ''}</div>
+            ${t.note ? '<div class="li-sub" style="white-space:normal;line-height:1.5;color:var(--text-light)">📝 ' + t.note + '</div>' : ''}
           </div>
           <span class="tag ${isDone?'green':(isUrgent?'red':'blue')}" style="font-size:10px">${isDone?'已完成':(isUrgent?'紧急':'待完成')}</span>
           <button class="todo-check-btn" onclick="event.stopPropagation();toggleTodoFromCal(${t.id})" title="${isDone?'恢复为未完成':'标记为已完成'}" style="width:28px;height:28px;border:2px solid var(--accent3);border-radius:50%;background:${isDone?'var(--accent3)':'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:6px;font-size:16px;color:${isDone?'#fff':'transparent'};transition:all 0.2s" onmouseover="if(!${isDone}){this.style.background='#F0FFF4';this.style.color='var(--accent3)'}" onmouseout="if(!${isDone}){this.style.background='transparent';this.style.color='transparent'}">✓</button>
