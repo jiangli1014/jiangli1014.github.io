@@ -1993,6 +1993,10 @@ function toggleTodo(id) {
   }
   saveStore();
   toast(t.status === '已完成' ? '✅ 已标记完成，已移至"已完成工作"' : '🔄 已恢复为未完成');
+  // 移除该待办的单条提醒横幅
+  dismissReminder(id);
+  // 刷新逾期汇总横幅（完成后自动消失或更新数量）
+  refreshOverdueBanner();
   renderDashboard();
 }
 
@@ -2190,6 +2194,10 @@ function toggleTodoFromCal(id) {
   }
   saveStore();
   toast(t.status === '已完成' ? '✅ 已标记完成' : '🔄 已恢复为未完成');
+  // 移除该待办的单条提醒横幅
+  dismissReminder(id);
+  // 刷新逾期汇总横幅
+  refreshOverdueBanner();
   renderCalendar();
 }
 
@@ -4388,6 +4396,48 @@ function checkOverdueOnOpen() {
     '</div>';
   document.body.appendChild(banner);
   if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+}
+
+// 刷新逾期汇总横幅：完成后自动移除或更新数量
+function refreshOverdueBanner() {
+  if (!store || !store.todoItems) return;
+  var today = new Date().toISOString().split('T')[0];
+  var overdue = kf(store.todoItems).filter(function(t) {
+    if (t.status !== '进行中') return false;
+    if (t.deadline && t.deadline < today) return true;
+    if (t.reminderDateTime && new Date(t.reminderDateTime) < new Date() && !t.reminderTriggered) return true;
+    return false;
+  });
+  var banner = document.getElementById('overdue-banner');
+  if (overdue.length === 0) {
+    // 没有逾期待办了，移除横幅
+    if (banner) {
+      banner.style.transition = 'transform 0.3s';
+      banner.style.transform = 'translateY(-100%)';
+      setTimeout(function() { banner.remove(); }, 300);
+    }
+    return;
+  }
+  // 还有逾期待办，更新横幅内容
+  if (banner) {
+    var itemsHtml = overdue.slice(0, 5).map(function(t) {
+      return '<div style="margin-top:6px;padding:4px 8px;background:rgba(255,255,255,0.15);border-radius:6px;font-size:12px">' +
+        '<b>' + t.title + '</b>' +
+        (t.deadline ? ' · 📅 ' + t.deadline : '') +
+        (t.priority === '紧急' ? ' · 🔴紧急' : '') +
+      '</div>';
+    }).join('');
+    if (overdue.length > 5) itemsHtml += '<div style="font-size:11px;margin-top:4px;opacity:0.8">还有' + (overdue.length - 5) + '条...</div>';
+    banner.innerHTML =
+      '<div class="ra-icon">⚠️</div>' +
+      '<div class="ra-content">' +
+        '<div class="ra-title">你有 ' + overdue.length + ' 条逾期待办</div>' +
+        itemsHtml +
+      '</div>' +
+      '<div class="ra-actions">' +
+        '<button class="ra-btn" onclick="dismissReminder(\'overdue-banner\')">知道了</button>' +
+      '</div>';
+  }
 }
 
 // ==================== INIT ====================
