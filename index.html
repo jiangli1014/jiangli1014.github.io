@@ -1833,14 +1833,20 @@ function viewPlanAttachment(planId, attIndex) {
       }
     }
     html += '</div>';
-    html += '<button class="btn btn-primary btn-block" style="margin-top:8px" onclick="downloadAttData(' + planId + ',' + attIndex + ')">⬇ 下载此图片</button>';
+    html += '<div style="display:flex;gap:8px;margin-top:8px">';
+    html += '<button class="btn btn-primary" style="flex:1" onclick="downloadAttData(' + planId + ',' + attIndex + ')">⬇ 下载</button>';
+    html += '<button class="btn" style="flex:1;background:#ff4d4f;color:#fff" onclick="deleteAttachment(' + planId + ',' + attIndex + ')">🗑️ 删除</button>';
+    html += '</div>';
   } else if (isPdf) {
     // PDF：iframe 内嵌预览
     html = '<div class="modal-title">📄 ' + (att.name || 'PDF文档') + '</div>';
     html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px">' + (att.size ? formatFileSize(att.size) : '') + '</div>';
-    html += '<iframe src="' + att.data + '" style="width:100%;height:55vh;border:1px solid var(--border);border-radius:8px" frameborder="0"></iframe>';
+    html += '<iframe src="' + att.data + '" style="width:100%;height:50vh;border:1px solid var(--border);border-radius:8px" frameborder="0"></iframe>';
     html += '<div style="font-size:11px;color:var(--text-light);margin-top:4px;text-align:center">如无法预览，点击下方下载</div>';
-    html += '<button class="btn btn-primary btn-block" style="margin-top:6px" onclick="downloadAttData(' + planId + ',' + attIndex + ')">⬇ 下载此文档</button>';
+    html += '<div style="display:flex;gap:8px;margin-top:6px">';
+    html += '<button class="btn btn-primary" style="flex:1" onclick="downloadAttData(' + planId + ',' + attIndex + ')">⬇ 下载</button>';
+    html += '<button class="btn" style="flex:1;background:#ff4d4f;color:#fff" onclick="deleteAttachment(' + planId + ',' + attIndex + ')">🗑️ 删除</button>';
+    html += '</div>';
   } else {
     // Word等文档：无法在线预览，提供下载
     html = '<div class="modal-title">📎 ' + (att.name || '文档') + '</div>';
@@ -1850,7 +1856,10 @@ function viewPlanAttachment(planId, attIndex) {
     html += '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">' + (att.size ? formatFileSize(att.size) : '') + '</div>';
     html += '<div style="font-size:12px;color:var(--text-light);margin-top:8px">Word文档暂不支持在线预览</div>';
     html += '</div>';
-    html += '<button class="btn btn-primary btn-block" onclick="downloadAttData(' + planId + ',' + attIndex + ')">⬇ 下载此文档</button>';
+    html += '<div style="display:flex;gap:8px">';
+    html += '<button class="btn btn-primary" style="flex:1" onclick="downloadAttData(' + planId + ',' + attIndex + ')">⬇ 下载</button>';
+    html += '<button class="btn" style="flex:1;background:#ff4d4f;color:#fff" onclick="deleteAttachment(' + planId + ',' + attIndex + ')">🗑️ 删除</button>';
+    html += '</div>';
   }
 
   // 底部附件列表导航
@@ -1882,6 +1891,28 @@ function downloadAttData(planId, attIndex) {
   a.click();
   document.body.removeChild(a);
   toast('📥 下载中...');
+}
+
+// 删除单个附件（从查看器中删除）
+function deleteAttachment(planId, attIndex) {
+  var p = store.teachingPlans.find(function(pl) { return pl.id === planId; });
+  if (!p || !p.attachments) return;
+  var att = p.attachments[attIndex];
+  if (!att) return;
+  var attName = att.name || '附件';
+  // 确认删除
+  if (!confirm('确定删除「' + attName + '」？\n删除后无法恢复。')) return;
+  p.attachments.splice(attIndex, 1);
+  saveStore();
+  toast('🗑️ 已删除：' + attName);
+  if (p.attachments.length > 0) {
+    // 还有附件，显示第一个
+    viewPlanAttachment(planId, 0);
+  } else {
+    // 没有附件了，关闭弹窗
+    closeModal();
+    renderPlanList();
+  }
 }
 
 // 图片点击全屏切换
