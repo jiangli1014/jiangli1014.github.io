@@ -904,6 +904,7 @@ async function loadStore() {
           if (!(key in saved)) saved[key] = defaults[key];
         }
         localStorage.setItem(STORE_KEY, JSON.stringify(saved));
+        if (saved.teachingPlans) saved.teachingPlans.forEach(migrateAttachments);
         return saved;
       }
     } catch(e) {
@@ -919,6 +920,7 @@ async function loadStore() {
     for (const key of Object.keys(defaults)) {
       if (!(key in saved)) saved[key] = defaults[key];
     }
+    if (saved.teachingPlans) saved.teachingPlans.forEach(migrateAttachments);
     return saved;
   } catch(e) { return getDefaultData(); }
 }
@@ -1601,12 +1603,12 @@ function renderPlanList() {
             进度：已完成 ${p.finished}/${p.weeks} 周
             <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" style="width:${p.progress}%;background:${pctColor}"></div></div>
           </div>
-          <div class="rc-footer" style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">覆盖班级：${p.classes?.join('、') || '-'}${p.attFileName ? ' · 📎 ' + p.attFileName : ''}</div>
+          <div class="rc-footer" style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">覆盖班级：${p.classes?.join('、') || '-'}${p.attachments && p.attachments.length ? ' · 📎 ' + p.attachments.length + '个附件' : (p.attFileName ? ' · 📎 ' + p.attFileName : '')}</div>
           <div class="rc-actions">
             <button class="btn btn-outline btn-sm" onclick="viewPlanDetail(${p.id})">查看详情</button>
             <button class="btn btn-outline btn-sm" onclick="editPlan(${p.id})" style="color:var(--accent)">✏️</button>
             <button class="btn btn-outline btn-sm" onclick="deletePlan(${p.id})" style="color:var(--primary)">🗑️</button>
-            ${p.attFileName ? '<button class="btn btn-outline btn-sm" style="color:var(--accent2)" onclick="viewAttachedFile(\'' + p.attFileName + '\', \'' + (p.attFileData || '') + '\')">📎 查看文件</button>' : ''}
+            ${p.attachments && p.attachments.length ? '<button class="btn btn-outline btn-sm" style="color:var(--accent2)" onclick="viewPlanAttachment(' + p.id + ',0)">📎 查看' + p.attachments.length + '个附件</button>' : (p.attFileName && p.attFileData ? '<button class="btn btn-outline btn-sm" style="color:var(--accent2)" onclick="viewAttachedFile(\'' + p.attFileName + '\', \'' + p.attFileData + '\')">📎 查看文件</button>' : '')}
             ${p.status !== '已完成' ? `<button class="btn btn-primary btn-sm" onclick="updatePlanProgress(${p.id})">更新进度</button>` : '<span style="font-size:12px;color:var(--accent3)">✅ 已完成</span>'}
           </div>
         </div>`;
@@ -1651,8 +1653,9 @@ function showAddPlanModal() {
     <div class="form-group"><label class="form-label">教学周数</label>
       <input class="form-input" id="planWeeks" type="number" value="16" min="8" max="20">
     </div>
-    <div class="form-group"><label class="form-label">📎 上传计划文件（拍照/PDF/Word）</label><input type="file" id="planFile" accept="image/*,.pdf,.doc,.docx" style="font-size:13px;padding:4px" onchange="previewPlanFile()"></div>
+    <div class="form-group"><label class="form-label">📎 上传附件（可多选照片/PDF/Word）</label><input type="file" id="planFile" multiple accept="image/*,.pdf,.doc,.docx" style="font-size:13px;padding:4px" onchange="previewPlanFiles()"></div>
     <div id="planFilePreview" style="font-size:11px;color:var(--accent3);margin-top:4px"></div>
+    <div style="font-size:11px;color:var(--text-light);margin-top:4px">支持多张照片（自动压缩）、PDF、Word文档</div>
     <button class="btn btn-primary btn-block" onclick="addTeachingPlan()" style="margin-top:8px">✅ 创建计划</button>
   `;
   document.getElementById('modalMask').classList.add('active');
@@ -1680,19 +1683,45 @@ function addTeachingPlan() {
     weeks: parseInt(document.getElementById('planWeeks').value) || 16,
     finished: 0,
     classes: Array.from(document.querySelectorAll('#planClassesBox input:checked')).map(cb => cb.value),
+    attachments: []
   };
   if (newPlan.classes.length === 0) {
     newPlan.classes = (getKinderGroups()[document.getElementById('planGroup').value] || ['待分配']);
   }
   store.teachingPlans.unshift(newPlan);
-  saveStore(); closeModal();
-  toast('✅ 教学计划已创建');
-  renderPlanList();
+  // 异步处理多文件上传
+  var fileInput = document.getElementById('planFile');
+  if (fileInput && fileInput.files && fileInput.files.length > 0) {
+    toast('⏳ 正在处理附件...');
+    processMultipleFiles(fileInput, [], function(attachments) {
+      newPlan.attachments = attachments;
+      saveStore();
+      toast('✅ 教学计划已创建（含' + attachments.length + '个附件）');
+      renderPlanList();
+    });
+  } else {
+    saveStore();
+    toast('✅ 教学计划已创建');
+    renderPlanList();
+  }
+  closeModal();
 }
 
 function viewPlanDetail(id) {
   const p = store.teachingPlans.find(pl => pl.id === id);
   if (!p) return;
+  if (!p.attachments) p.attachments = [];
+  var attHtml = '';
+  if (p.attachments.length > 0) {
+    attHtml = '<div style="margin-top:10px;padding:8px;background:#F0F4FF;border-radius:6px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">📎 附件（' + p.attachments.length + '个）</div>';
+    attHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    p.attachments.forEach(function(a, i) {
+      var isImg = a.type && a.type.startsWith('image/');
+      var icon = isImg ? '🖼️' : (a.type === 'application/pdf' ? '📄' : '📎');
+      attHtml += '<button class="btn btn-outline btn-sm" style="padding:4px 8px;font-size:11px" onclick="viewPlanAttachment(' + p.id + ',' + i + ')">' + icon + ' ' + (a.name.length > 12 ? a.name.substring(0,10) + '..' : a.name) + '</button>';
+    });
+    attHtml += '</div></div>';
+  }
   document.getElementById('modalBox').innerHTML = `
     <div class="modal-title">📋 计划详情</div>
     <div class="rich-card">
@@ -1708,10 +1737,117 @@ function viewPlanDetail(id) {
         状态：${p.status}<br>
         创建时间：${p.createdAt}
       </div>
-      ${p.attFileName ? '<div style="margin-top:8px;padding:8px;background:#F0F4FF;border-radius:6px;font-size:12px">📎 附件：' + p.attFileName + (p.attFileSize ? ' (' + formatFileSize(p.attFileSize) + ')' : '') + (p.attFileData ? ' <button class="btn btn-sm" style="padding:2px 6px;font-size:11px;color:var(--accent2)" onclick="viewAttachedFile(\'' + p.attFileName + '\', \'' + p.attFileData + '\')">查看</button>' : '') + '</div>' : ''}
+      ${attHtml}
     </div>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="editPlan(${p.id})">✏️ 编辑此计划</button>
   `;
   document.getElementById('modalMask').classList.add('active');
+}
+
+// 在线查看单个附件（支持图片轮播、PDF内嵌预览、文档下载）
+function viewPlanAttachment(planId, attIndex) {
+  var p = store.teachingPlans.find(function(pl) { return pl.id === planId; });
+  if (!p || !p.attachments) return;
+  var atts = p.attachments;
+  var att = atts[attIndex];
+  if (!att) return;
+  var isImg = att.type && att.type.startsWith('image/');
+  var isPdf = att.type === 'application/pdf' || (att.name && att.name.toLowerCase().endsWith('.pdf'));
+  var html = '';
+
+  if (isImg) {
+    // 图片：大图显示 + 左右切换
+    html = '<div class="modal-title">🖼️ ' + (att.name || '图片') + '</div>';
+    html += '<div id="attImageViewer" style="text-align:center;position:relative">';
+    html += '<img id="attImg" src="' + att.data + '" style="max-width:100%;max-height:60vh;border-radius:8px" onclick="toggleFullScreenImg(this)">';
+    // 缩略图条
+    if (atts.length > 1) {
+      var imgIndexes = atts.map(function(a, i) { return { a: a, i: i }; }).filter(function(x) { return x.a.type && x.a.type.startsWith('image/'); });
+      if (imgIndexes.length > 1) {
+        html += '<div style="display:flex;gap:4px;justify-content:center;margin-top:8px;overflow-x:auto;padding:4px">';
+        imgIndexes.forEach(function(x) {
+          html += '<img src="' + x.a.data + '" style="width:40px;height:40px;object-fit:cover;border-radius:4px;cursor:pointer;border:2px solid ' + (x.i === attIndex ? 'var(--accent)' : 'transparent') + '" onclick="viewPlanAttachment(' + planId + ',' + x.i + ')">';
+        });
+        html += '</div>';
+      }
+    }
+    html += '</div>';
+    html += '<button class="btn btn-primary btn-block" style="margin-top:8px" onclick="downloadAttData(' + planId + ',' + attIndex + ')">⬇ 下载此图片</button>';
+  } else if (isPdf) {
+    // PDF：iframe 内嵌预览
+    html = '<div class="modal-title">📄 ' + (att.name || 'PDF文档') + '</div>';
+    html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px">' + (att.size ? formatFileSize(att.size) : '') + '</div>';
+    html += '<iframe src="' + att.data + '" style="width:100%;height:55vh;border:1px solid var(--border);border-radius:8px" frameborder="0"></iframe>';
+    html += '<div style="font-size:11px;color:var(--text-light);margin-top:4px;text-align:center">如无法预览，点击下方下载</div>';
+    html += '<button class="btn btn-primary btn-block" style="margin-top:6px" onclick="downloadAttData(' + planId + ',' + attIndex + ')">⬇ 下载此文档</button>';
+  } else {
+    // Word等文档：无法在线预览，提供下载
+    html = '<div class="modal-title">📎 ' + (att.name || '文档') + '</div>';
+    html += '<div style="padding:20px;text-align:center">';
+    html += '<div style="font-size:40px;margin-bottom:10px">📄</div>';
+    html += '<div style="font-size:14px;font-weight:600">' + (att.name || '文档') + '</div>';
+    html += '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">' + (att.size ? formatFileSize(att.size) : '') + '</div>';
+    html += '<div style="font-size:12px;color:var(--text-light);margin-top:8px">Word文档暂不支持在线预览</div>';
+    html += '</div>';
+    html += '<button class="btn btn-primary btn-block" onclick="downloadAttData(' + planId + ',' + attIndex + ')">⬇ 下载此文档</button>';
+  }
+
+  // 底部附件列表导航
+  if (atts.length > 1) {
+    html += '<div style="margin-top:8px;padding:6px;background:var(--bg-light);border-radius:6px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center">';
+    atts.forEach(function(a, i) {
+      var icon = (a.type && a.type.startsWith('image/')) ? '🖼️' : (a.type === 'application/pdf' ? '📄' : '📎');
+      var bg = i === attIndex ? 'var(--accent)' : 'transparent';
+      var color = i === attIndex ? '#fff' : 'var(--text-secondary)';
+      html += '<button onclick="viewPlanAttachment(' + planId + ',' + i + ')" style="padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer;background:' + bg + ';color:' + color + '">' + icon + ' ' + (i + 1) + '</button>';
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('modalBox').innerHTML = html;
+  document.getElementById('modalMask').classList.add('active');
+}
+
+// 下载附件数据
+function downloadAttData(planId, attIndex) {
+  var p = store.teachingPlans.find(function(pl) { return pl.id === planId; });
+  if (!p || !p.attachments) return;
+  var att = p.attachments[attIndex];
+  if (!att || !att.data) { toast('⚠️ 无文件数据'); return; }
+  var a = document.createElement('a');
+  a.href = att.data;
+  a.download = att.name || '附件';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('📥 下载中...');
+}
+
+// 图片点击全屏切换
+function toggleFullScreenImg(img) {
+  if (img.style.position === 'fixed') {
+    img.style.position = '';
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '60vh';
+    img.style.zIndex = '';
+    img.style.top = '';
+    img.style.left = '';
+    img.style.objectFit = '';
+    img.style.background = '';
+    img.style.cursor = '';
+  } else {
+    img.style.position = 'fixed';
+    img.style.top = '0';
+    img.style.left = '0';
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '100%';
+    img.style.objectFit = 'contain';
+    img.style.zIndex = '9999';
+    img.style.background = 'rgba(0,0,0,0.85)';
+    img.style.cursor = 'zoom-out';
+  }
 }
 
 function updatePlanProgress(id) {
@@ -1743,8 +1879,13 @@ function editPlan(id) {
     '<div class="form-group"><label class="form-label">覆盖班级（勾选）</label><div id="editPlanClassesBox" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:var(--bg-light);border-radius:8px">' + getKinderClasses().map(c => '<label style="display:flex;align-items:center;gap:3px;font-size:13px;padding:3px 8px;background:#fff;border-radius:6px;cursor:pointer"><input type="checkbox" value="' + c + '" ' + (p.classes.includes(c) ? 'checked' : '') + ' style="margin:0"> ' + c + '</label>').join('') + '</div></div>' +
     "<div class=\"form-group\"><label class=\"form-label\">总周数</label><input class=\"form-input\" id=\"editPlanWeeks\" type=\"number\" value=\"" + p.weeks + "\"></div>" +
     "<div class=\"form-group\"><label class=\"form-label\">完成周数</label><input class=\"form-input\" id=\"editPlanFinished\" type=\"number\" value=\"" + p.finished + "\"></div>" +
-    "<div class=\"form-group\"><label class=\"form-label\">📎 上传计划文件（拍照/PDF/Word）</label><input type=\"file\" id=\"editPlanFile\" accept=\"image/*,.pdf,.doc,.docx\" style=\"font-size:13px;padding:4px\" onchange=\"previewEditPlanFile()\"></div>" +
+    "<div class=\"form-group\"><label class=\"form-label\">📎 上传附件（可多选照片/PDF/Word）</label><input type=\"file\" id=\"editPlanFile\" multiple accept=\"image/*,.pdf,.doc,.docx\" style=\"font-size:13px;padding:4px\" onchange=\"previewEditPlanFiles()\"></div>" +
     "<div id=\"editPlanFilePreview\" style=\"font-size:11px;color:var(--accent3);margin-top:4px\"></div>" +
+    (p.attachments && p.attachments.length ? '<div id="existingAttachments" style="margin-top:6px"><div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px">已有附件：</div>' + p.attachments.map(function(a,i) {
+      var icon = a.type && a.type.startsWith('image/') ? '🖼️' : (a.type === 'application/pdf' ? '📄' : '📎');
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:var(--bg-light);border-radius:6px;margin-bottom:4px;font-size:12px"><span>' + icon + ' ' + a.name + (a.size ? ' (' + formatFileSize(a.size) + ')' : '') + '</span><button class="btn btn-sm" style="background:none;padding:2px 6px;font-size:12px;color:var(--primary)" onclick="removePlanAttachment(' + p.id + ',' + i + ')">🗑️</button></div>';
+    }).join('') + '</div>' : '') +
+    "<div style=\"font-size:11px;color:var(--text-light);margin-top:4px\">支持多张照片（自动压缩）、PDF、Word文档</div>" +
     "<button class=\"btn btn-primary btn-block\" onclick=\"saveEditPlan(" + p.id + ")\">💾 保存修改</button>" +
     "<button class=\"btn btn-block\" style=\"background:#f0f0f0;margin-top:6px\" onclick=\"deletePlan(" + p.id + ")\">🗑️ 删除此计划</button>";
   document.getElementById("modalMask").classList.add("active");
@@ -1762,9 +1903,19 @@ function saveEditPlan(id) {
   p.finished = Math.min(parseInt(document.getElementById("editPlanFinished").value) || p.finished, p.weeks);
   p.progress = Math.round((p.finished / p.weeks) * 100);
   if (p.progress >= 100) p.status = "已完成"; else if (p.progress > 0) p.status = "进行中";
-  // 处理编辑时上传的文件
-  handleEditPlanFile(p);
-  saveStore(); closeModal(); toast("✅ 计划已更新"); renderPlanList();
+  if (!p.attachments) p.attachments = [];
+  // 处理新上传的文件（追加到已有附件）
+  var fileInput = document.getElementById('editPlanFile');
+  if (fileInput && fileInput.files && fileInput.files.length > 0) {
+    toast('⏳ 正在处理附件...');
+    processMultipleFiles(fileInput, p.attachments, function(attachments) {
+      p.attachments = attachments;
+      saveStore(); toast("✅ 计划已更新（含" + (attachments ? attachments.length : 0) + "个附件）"); renderPlanList();
+    });
+  } else {
+    saveStore(); toast("✅ 计划已更新"); renderPlanList();
+  }
+  closeModal();
 }
 
 function deletePlan(id) {
@@ -2448,18 +2599,101 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
 }
 
-function previewPlanFile() {
-  const input = document.getElementById('planFile');
-  if (input && input.files && input.files.length > 0) {
-    document.getElementById('planFilePreview').innerHTML = '📄 ' + input.files[0].name + ' (' + formatFileSize(input.files[0].size) + ')';
+// 图片压缩：canvas resize + JPEG quality
+function compressImage(file, maxWidth, quality, callback) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      let w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality || 0.7);
+      callback({ data: dataUrl, w: w, h: h });
+    };
+    img.onerror = function() { callback({ data: e.target.result, w: 0, h: 0 }); };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() { callback(null); };
+  reader.readAsDataURL(file);
+}
+
+// 异步处理多文件上传：图片自动压缩，文档直接base64
+function processMultipleFiles(input, existingAttachments, callback) {
+  if (!input || !input.files || input.files.length === 0) { callback(existingAttachments || []); return; }
+  var files = Array.from(input.files);
+  var result = (existingAttachments || []).slice(); // 保留已有附件
+  var pending = files.length;
+  files.forEach(function(file) {
+    if (file.size > 15 * 1024 * 1024) {
+      toast('⚠️ ' + file.name + ' 超过15MB，已跳过');
+      pending--; if (pending === 0) callback(result); return;
+    }
+    var isImage = file.type.startsWith('image/');
+    if (isImage) {
+      compressImage(file, 1280, 0.7, function(r) {
+        if (r && r.data) {
+          result.push({ name: file.name, size: file.size, type: 'image/jpeg', data: r.data, w: r.w, h: r.h });
+        }
+        pending--; if (pending === 0) callback(result);
+      });
+    } else {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        result.push({ name: file.name, size: file.size, type: file.type, data: e.target.result });
+        pending--; if (pending === 0) callback(result);
+      };
+      reader.onerror = function() { pending--; if (pending === 0) callback(result); };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+// 数据迁移：旧的单附件结构 → attachments 数组
+function migrateAttachments(plan) {
+  if (plan.attachments) return;
+  if (plan.attFileName && plan.attFileData) {
+    plan.attachments = [{ name: plan.attFileName, size: plan.attFileSize || 0, type: plan.attFileType || '', data: plan.attFileData }];
+  } else {
+    plan.attachments = [];
   }
 }
 
-function previewEditPlanFile() {
+function previewPlanFiles() {
+  const input = document.getElementById('planFile');
+  const preview = document.getElementById('planFilePreview');
+  if (!input || !input.files || input.files.length === 0) { preview.innerHTML = ''; return; }
+  var html = '已选 ' + input.files.length + ' 个文件：<br>';
+  Array.from(input.files).forEach(function(f) {
+    var icon = f.type.startsWith('image/') ? '🖼️' : (f.type === 'application/pdf' ? '📄' : '📎');
+    html += icon + ' ' + f.name + ' (' + formatFileSize(f.size) + ')<br>';
+  });
+  preview.innerHTML = html;
+}
+
+function previewEditPlanFiles() {
   const input = document.getElementById('editPlanFile');
-  if (input && input.files && input.files.length > 0) {
-    document.getElementById('editPlanFilePreview').innerHTML = '📄 ' + input.files[0].name + ' (' + formatFileSize(input.files[0].size) + ')';
-  }
+  const preview = document.getElementById('editPlanFilePreview');
+  if (!input || !input.files || input.files.length === 0) { preview.innerHTML = ''; return; }
+  var html = '新增 ' + input.files.length + ' 个文件：<br>';
+  Array.from(input.files).forEach(function(f) {
+    var icon = f.type.startsWith('image/') ? '🖼️' : (f.type === 'application/pdf' ? '📄' : '📎');
+    html += icon + ' ' + f.name + ' (' + formatFileSize(f.size) + ')<br>';
+  });
+  preview.innerHTML = html;
+}
+
+// 删除已有附件（编辑弹窗中）
+function removePlanAttachment(planId, attIndex) {
+  var p = store.teachingPlans.find(function(pl) { return pl.id === planId; });
+  if (!p || !p.attachments) return;
+  p.attachments.splice(attIndex, 1);
+  saveStore();
+  editPlan(planId); // 重新渲染编辑弹窗
+  toast('🗑️ 附件已移除');
 }
 
 function previewActFile() {
