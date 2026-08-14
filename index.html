@@ -637,9 +637,10 @@ body{
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <div class="avatar">🏫</div>
-    <div class="info">
-      <div class="name">蒋丽 · 教学园长</div>
-      <div id="sidebarKinder">光丽幼儿园</div>
+<div class="info">
+    <div class="name">蒋丽 · 教学园长</div>
+    <div id="sidebarKinder">光丽幼儿园</div>
+    <div style="font-size:9px;color:var(--text-light);margin-top:2px">版本 v20260814</div>
     </div>
   </div>
   <div class="sidebar-nav" id="sidebarNav"></div>
@@ -710,20 +711,37 @@ function loadKinderConfig() {
     const saved = localStorage.getItem('kinder_config');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // 合并：保留默认结构，覆盖用户修改
+      // 合并：保留默认结构，覆盖用户修改，确保必需字段存在
       Object.keys(DEFAULT_KINDERS).forEach(kid => {
         if (parsed[kid]) {
-          kindergartens[kid] = parsed[kid];
+          // 确保必需字段存在，缺失的用默认值补充
+          kindergartens[kid] = {
+            id: kid,
+            name: parsed[kid].name || DEFAULT_KINDERS[kid].name,
+            shortName: parsed[kid].shortName || DEFAULT_KINDERS[kid].shortName,
+            groups: parsed[kid].groups || JSON.parse(JSON.stringify(DEFAULT_KINDERS[kid].groups)),
+            allClasses: parsed[kid].allClasses || JSON.parse(JSON.stringify(DEFAULT_KINDERS[kid].allClasses))
+          };
         }
       });
     }
-  } catch(e) {}
+  } catch(e) { console.warn('loadKinderConfig error:', e); }
 }
 
 function saveKinderConfig() {
   try {
     localStorage.setItem('kinder_config', JSON.stringify(kindergartens));
   } catch(e) {}
+}
+
+function getKinder() {
+  const k = kindergartens[currentKinder];
+  if (!k) {
+    console.error('幼儿园配置缺失:', currentKinder);
+    currentKinder = 'gl';
+    return kindergartens['gl'];
+  }
+  return k;
 }
 
 function getKinder() { return kindergartens[currentKinder]; }
@@ -824,12 +842,29 @@ function confirmImport() {
 }
 
 function switchKinder(id) {
-  currentKinder = id;
-  saveStore();
-  const k = getKinder();
-  document.getElementById('kinderName').textContent = k.shortName;
-  document.getElementById('sidebarKinder').textContent = k.name;
-  document.getElementById('pageTitle').textContent = k.name + '工作台';
+  try {
+    currentKinder = id;
+    saveStore();
+    const k = getKinder();
+    if (!k) { toast('⚠️ 切换失败：找不到学校配置'); return; }
+    const kn = document.getElementById('kinderName');
+    const sk = document.getElementById('sidebarKinder');
+    const pt = document.getElementById('pageTitle');
+    if (kn) kn.textContent = k.shortName;
+    if (sk) sk.textContent = k.name;
+    if (pt) pt.textContent = k.name + '工作台';
+    // 更新菜单选中状态
+    document.querySelectorAll('.kinder-menu-item').forEach(el => el.classList.remove('active'));
+    const mi = document.getElementById('kmi-' + id);
+    if (mi) mi.classList.add('active');
+    toast('🏫 已切换到' + k.name);
+    // 重新渲染当前页面
+    if (currentModule !== 'dashboard') renderContent();
+    else renderDashboard();
+  } catch(e) {
+    console.error('switchKinder error:', e);
+    toast('⚠️ 切换出错：' + e.message);
+  }
   // Re-render current page
   if (currentModule !== 'dashboard') renderContent();
   else renderDashboard();
@@ -1203,15 +1238,19 @@ function closeSidebar() {
 
 function toggleKinderMenu() {
   const menu = document.getElementById('kinderMenu');
+  if (!menu) return;
   const isOpen = menu.style.display === 'block';
   menu.style.display = isOpen ? 'none' : 'block';
   // Update active state
   document.querySelectorAll('.kinder-menu-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('kmi-' + currentKinder).classList.add('active');
+  const mi = document.getElementById('kmi-' + currentKinder);
+  if (mi) mi.classList.add('active');
 }
 document.addEventListener('click', function(e) {
+  const menu = document.getElementById('kinderMenu');
+  if (!menu) return;
   if (!e.target.closest('.kinder-switcher') && !e.target.closest('.kinder-menu')) {
-    document.getElementById('kinderMenu').style.display = 'none';
+    menu.style.display = 'none';
   }
 });
 
