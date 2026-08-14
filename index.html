@@ -334,14 +334,23 @@ body{
 .modal-box{
   background:#fff; width:100%; max-width:480px;
   border-radius:var(--radius-lg) var(--radius-lg) 0 0;
-  max-height:85vh; overflow-y:auto;
+  max-height:88vh; overflow-y:auto;
   padding:20px 16px;
-  padding-bottom: calc(20px + var(--safe-bottom));
+  padding-bottom: calc(80px + var(--safe-bottom));
   transform:translateY(100%);
   transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  -webkit-overflow-scrolling: touch;
 }
 .modal-mask.active .modal-box{transform:translateY(0)}
 .modal-title{font-size:17px;font-weight:700;text-align:center;margin-bottom:16px}
+.modal-scroll-hint{
+  position:sticky; bottom:0; left:0; right:0;
+  background:linear-gradient(180deg,transparent,#fff 30%);
+  text-align:center; font-size:11px; color:var(--text-light);
+  padding:14px 0 4px; margin:0 -16px;
+  pointer-events:none;
+}
+.modal-scroll-hint.hidden{display:none}
 
 /* Chip */
 .chip-group{display:flex;flex-wrap:wrap;gap:6px}
@@ -888,18 +897,24 @@ function setSyncStatus(state) {
 }
 
 function showSyncInfo() {
-  let msg = cloudReady ? '✅ 云端已连接' : (cloudError ? '❌ 连接失败：' + cloudError : '⏳ 正在连接...');
-  if (cloudLastSync) msg += '\n📅 最后同步：' + cloudLastSync;
-  msg += '\n\n💡 如果多设备不同步，请检查：\n1. CloudBase 控制台 → 数据库 → work_data → 权限 → 所有用户可读写\n2. 匿名登录是否已开启';
-  alert(msg);
+  // 用 toast 提示，不弹 alert 挡住界面
+  if (cloudReady) {
+    toast('✅ 云端已连接' + (cloudLastSync ? ' · 最后同步：' + cloudLastSync : ''));
+  } else if (cloudError) {
+    toast('📴 离线模式：' + cloudError + '（数据保存在本机）');
+  } else {
+    toast('⏳ 正在连接云端...');
+  }
 }
 
-// ===== CloudBase 初始化 =====
+// ===== CloudBase 初始化（失败时静默降级到本地模式）=====
 function initCloudBase() {
   setSyncStatus('connecting');
   return new Promise((resolve) => {
     if (typeof tcb === 'undefined') {
-      cloudError = 'SDK未加载';
+      // SDK 未加载（国内访问 GitHub Pages 时无法访问腾讯云 CDN 是正常情况）
+      cloudError = '云端SDK未加载，使用本地模式';
+      cloudReady = false;
       setSyncStatus('offline');
       resolve(false);
       return;
@@ -915,11 +930,13 @@ function initCloudBase() {
         resolve(true);
       }).catch(err => {
         cloudError = '登录失败：' + (err.message || '未知错误');
+        cloudReady = false;
         setSyncStatus('offline');
         resolve(false);
       });
     } catch(e) {
       cloudError = '初始化失败：' + (e.message || '未知');
+      cloudReady = false;
       setSyncStatus('offline');
       resolve(false);
     }
@@ -1668,6 +1685,7 @@ function showAddPlanModal() {
   const groupOptions = ['大班级组', '中班级组', '小班级组', '小小班级组'];
   document.getElementById('modalBox').innerHTML = `
     <div class="modal-title">📋 新增教学计划</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-light);margin-bottom:10px">👆 向上滑动查看更多</div>
     <div class="form-group"><label class="form-label">计划类型</label>
       <select class="form-input form-select" id="planType">
         ${pTypes.map(t => `<option>${t}</option>`).join('')}
@@ -1687,8 +1705,8 @@ function showAddPlanModal() {
     <div class="form-group"><label class="form-label">涉及领域</label>
       <input class="form-input" id="planSubjects" placeholder="如：健康,语言,科学">
     </div>
-    <div class="form-group"><label class="form-label">覆盖班级（勾选）</label>
-      <div id="planClassesBox" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:var(--bg-light);border-radius:8px">
+    <div class="form-group"><label class="form-label">覆盖班级（可多选）</label>
+      <div id="planClassesBox" style="display:flex;flex-wrap:wrap;gap:6px;max-height:100px;overflow-y:auto;padding:6px;background:var(--bg-light);border-radius:8px">
         ${getKinderClasses().map(c => `<label style="display:flex;align-items:center;gap:3px;font-size:13px;padding:3px 8px;background:#fff;border-radius:6px;cursor:pointer"><input type="checkbox" value="${c}" style="margin:0"> ${c}</label>`).join('')}
       </div>
       <div style="font-size:11px;color:var(--text-light);margin-top:4px">在上方"班级管理"中可添加新班级</div>
@@ -1696,9 +1714,9 @@ function showAddPlanModal() {
     <div class="form-group"><label class="form-label">教学周数</label>
       <input class="form-input" id="planWeeks" type="number" value="16" min="8" max="20">
     </div>
-    <div class="form-group"><label class="form-label">📎 上传附件（可多选照片/PDF/Word）</label><input type="file" id="planFile" multiple accept="image/*,.pdf,.doc,.docx" style="font-size:13px;padding:4px" onchange="previewPlanFiles()"></div>
+    <div class="form-group"><label class="form-label">📎 上传附件（可多选：照片+PDF+Word）</label><input type="file" id="planFile" multiple accept="image/*,.pdf,.doc,.docx" style="font-size:13px;padding:4px;width:100%" onchange="previewPlanFiles()"></div>
     <div id="planFilePreview" style="font-size:11px;color:var(--accent3);margin-top:4px"></div>
-    <div style="font-size:11px;color:var(--text-light);margin-top:4px">支持多张照片（自动压缩）、PDF、Word文档</div>
+    <div style="font-size:11px;color:var(--text-light);margin-top:4px">💡 一次可多选照片/PDF/Word；照片自动压缩</div>
     <button class="btn btn-primary btn-block" onclick="addTeachingPlan()" style="margin-top:8px">✅ 创建计划</button>
   `;
   document.getElementById('modalMask').classList.add('active');
@@ -1915,15 +1933,17 @@ function editPlan(id) {
   const typeOptions = pTypes.map(t => '<option ' + (p.planType===t?'selected':'') + '>' + t + '</option>').join('');
   const groupOpts = groupOptions.map(g => '<option ' + (p.group===g?'selected':'') + '>' + g + '</option>').join('');
   document.getElementById("modalBox").innerHTML = '<div class="modal-title">✏️ 编辑教学计划</div>' +
+    '<div style="text-align:center;font-size:11px;color:var(--text-light);margin-bottom:10px">👆 向上滑动查看更多</div>' +
     '<div class="form-group"><label class="form-label">计划类型</label><select class="form-input form-select" id="editPlanType">' + typeOptions + '</select></div>' +
     '<div class="form-group"><label class="form-label">级组</label><select class="form-input form-select" id="editPlanGroup">' + groupOpts + '</select></div>' +
     '<div class="form-group"><label class="form-label">主题</label><input class="form-input" id="editPlanTheme" value="' + p.theme + '"></div>' +
     "<div class=\"form-group\"><label class=\"form-label\">领域</label><input class=\"form-input\" id=\"editPlanSubjects\" value=\"" + p.subjects + "\"></div>" +
-    '<div class="form-group"><label class="form-label">覆盖班级（勾选）</label><div id="editPlanClassesBox" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:var(--bg-light);border-radius:8px">' + getKinderClasses().map(c => '<label style="display:flex;align-items:center;gap:3px;font-size:13px;padding:3px 8px;background:#fff;border-radius:6px;cursor:pointer"><input type="checkbox" value="' + c + '" ' + (p.classes.includes(c) ? 'checked' : '') + ' style="margin:0"> ' + c + '</label>').join('') + '</div></div>' +
+    '<div class="form-group"><label class="form-label">覆盖班级（可多选）</label><div id="editPlanClassesBox" style="display:flex;flex-wrap:wrap;gap:6px;max-height:100px;overflow-y:auto;padding:6px;background:var(--bg-light);border-radius:8px">' + getKinderClasses().map(c => '<label style="display:flex;align-items:center;gap:3px;font-size:13px;padding:3px 8px;background:#fff;border-radius:6px;cursor:pointer"><input type="checkbox" value="' + c + '" ' + (p.classes.includes(c) ? 'checked' : '') + ' style="margin:0"> ' + c + '</label>').join('') + '</div></div>' +
     "<div class=\"form-group\"><label class=\"form-label\">总周数</label><input class=\"form-input\" id=\"editPlanWeeks\" type=\"number\" value=\"" + p.weeks + "\"></div>" +
     "<div class=\"form-group\"><label class=\"form-label\">完成周数</label><input class=\"form-input\" id=\"editPlanFinished\" type=\"number\" value=\"" + p.finished + "\"></div>" +
-    "<div class=\"form-group\"><label class=\"form-label\">📎 上传附件（可多选照片/PDF/Word）</label><input type=\"file\" id=\"editPlanFile\" multiple accept=\"image/*,.pdf,.doc,.docx\" style=\"font-size:13px;padding:4px\" onchange=\"previewEditPlanFiles()\"></div>" +
+    "<div class=\"form-group\"><label class=\"form-label\">📎 上传附件（可多选：照片+PDF+Word）</label><input type=\"file\" id=\"editPlanFile\" multiple accept=\"image/*,.pdf,.doc,.docx\" style=\"font-size:13px;padding:4px;width:100%\" onchange=\"previewEditPlanFiles()\"></div>" +
     "<div id=\"editPlanFilePreview\" style=\"font-size:11px;color:var(--accent3);margin-top:4px\"></div>" +
+    "<div style=\"font-size:11px;color:var(--text-light);margin-top:4px\">💡 一次可多选照片/PDF/Word；新文件会添加到现有附件</div>" +
     (p.attachments && p.attachments.length ? '<div id="existingAttachments" style="margin-top:6px"><div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px">已有附件：</div>' + p.attachments.map(function(a,i) {
       var icon = a.type && a.type.startsWith('image/') ? '🖼️' : (a.type === 'application/pdf' ? '📄' : '📎');
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:var(--bg-light);border-radius:6px;margin-bottom:4px;font-size:12px"><span>' + icon + ' ' + a.name + (a.size ? ' (' + formatFileSize(a.size) + ')' : '') + '</span><button class="btn btn-sm" style="background:none;padding:2px 6px;font-size:12px;color:var(--primary)" onclick="removePlanAttachment(' + p.id + ',' + i + ')">🗑️</button></div>';
